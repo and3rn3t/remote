@@ -6,9 +6,8 @@
 //
 
 import AppIntents
-import Network
 import Foundation
-import os
+import SharedModels
 
 // MARK: - Power Intent
 
@@ -28,7 +27,7 @@ struct PowerOnIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let command = powerOn ? "PWON" : "PWSTANDBY"
-        let success = await IntentCommandSender.send(command, to: receiver.ipAddress, port: receiver.port)
+        let success = await DenonCommandSender.send(command, to: receiver.ipAddress, port: receiver.port)
 
         if success {
             return .result(dialog: "\(receiver.name) powered \(powerOn ? "on" : "off").")
@@ -57,7 +56,7 @@ struct SetVolumeIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         // Denon protocol: MV followed by two-digit volume (e.g. MV45)
         let command = String(format: "MV%02d", volume)
-        let success = await IntentCommandSender.send(command, to: receiver.ipAddress, port: receiver.port)
+        let success = await DenonCommandSender.send(command, to: receiver.ipAddress, port: receiver.port)
 
         if success {
             return .result(dialog: "\(receiver.name) volume set to \(volume).")
@@ -85,7 +84,7 @@ struct SetInputIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let command = "SI\(inputSource.code)"
-        let success = await IntentCommandSender.send(command, to: receiver.ipAddress, port: receiver.port)
+        let success = await DenonCommandSender.send(command, to: receiver.ipAddress, port: receiver.port)
 
         if success {
             return .result(dialog: "\(receiver.name) input set to \(inputSource.name).")
@@ -145,7 +144,7 @@ struct ToggleMuteIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let command = mute ? "MUON" : "MUOFF"
-        let success = await IntentCommandSender.send(command, to: receiver.ipAddress, port: receiver.port)
+        let success = await DenonCommandSender.send(command, to: receiver.ipAddress, port: receiver.port)
 
         if success {
             return .result(dialog: "\(receiver.name) \(mute ? "muted" : "unmuted").")
@@ -165,59 +164,5 @@ enum IntentCommandError: Error, CustomLocalizedStringResourceConvertible {
         case .connectionFailed:
             return "Could not connect to the receiver. Make sure it is powered on and reachable."
         }
-    }
-}
-
-// MARK: - Lightweight TCP Sender (shared with main app intents)
-
-enum IntentCommandSender {
-    static func send(_ command: String, to host: String, port: Int) async -> Bool {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
-            let queue = DispatchQueue(label: "dev.andernet.remote.intent.tcp")
-            let continuationGuard = IntentContinuationGuard()
-
-            let connection = NWConnection(
-                host: NWEndpoint.Host(host),
-                port: NWEndpoint.Port(integerLiteral: UInt16(port)),
-                using: .tcp
-            )
-
-            connection.stateUpdateHandler = { state in
-                switch state {
-                case .ready:
-                    let data = Data("\(command)\r".utf8)
-                    connection.send(content: data, completion: .contentProcessed { _ in
-                        connection.cancel()
-                        continuationGuard.resumeOnce { continuation.resume(returning: true) }
-                    })
-                case .failed:
-                    connection.cancel()
-                    continuationGuard.resumeOnce { continuation.resume(returning: false) }
-                case .cancelled:
-                    continuationGuard.resumeOnce { continuation.resume(returning: false) }
-                default:
-                    break
-                }
-            }
-
-            connection.start(queue: queue)
-
-            queue.asyncAfter(deadline: .now() + DenonConstants.intentTimeout) {
-                connection.cancel()
-                continuationGuard.resumeOnce { continuation.resume(returning: false) }
-            }
-        }
-    }
-}
-
-private final class IntentContinuationGuard: Sendable {
-    private let lock = OSAllocatedUnfairLock(initialState: false)
-    func resumeOnce(_ action: () -> Void) {
-        let shouldResume = lock.withLock { alreadyResumed -> Bool in
-            guard !alreadyResumed else { return false }
-            alreadyResumed = true
-            return true
-        }
-        if shouldResume { action() }
     }
 }

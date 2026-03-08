@@ -4,9 +4,8 @@
 //
 
 import AppIntents
-import Network
+import SharedModels
 import WidgetKit
-import os
 
 struct TogglePowerIntent: AppIntent {
     static var title: LocalizedStringResource = "Toggle Receiver Power"
@@ -28,61 +27,5 @@ struct TogglePowerIntent: AppIntent {
 
         WidgetCenter.shared.reloadTimelines(ofKind: "ReceiverStatusWidget")
         return .result()
-    }
-}
-
-// MARK: - Lightweight TCP Command Sender
-
-enum DenonCommandSender {
-    static func send(_ command: String, to host: String, port: Int) async -> Bool {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
-            let queue = DispatchQueue(label: "dev.andernet.remote.widget.tcp")
-            let continuationGuard = ContinuationGuard()
-
-            let connection = NWConnection(
-                host: NWEndpoint.Host(host),
-                port: NWEndpoint.Port(integerLiteral: UInt16(port)),
-                using: .tcp
-            )
-
-            connection.stateUpdateHandler = { state in
-                switch state {
-                case .ready:
-                    let data = Data("\(command)\r".utf8)
-                    connection.send(content: data, completion: .contentProcessed { _ in
-                        connection.cancel()
-                        continuationGuard.resumeOnce { continuation.resume(returning: true) }
-                    })
-                case .failed:
-                    connection.cancel()
-                    continuationGuard.resumeOnce { continuation.resume(returning: false) }
-                case .cancelled:
-                    continuationGuard.resumeOnce { continuation.resume(returning: false) }
-                default:
-                    break
-                }
-            }
-
-            connection.start(queue: queue)
-
-            // Timeout after configured duration
-            queue.asyncAfter(deadline: .now() + 5) {
-                connection.cancel()
-                continuationGuard.resumeOnce { continuation.resume(returning: false) }
-            }
-        }
-    }
-}
-
-/// Ensures a continuation is only resumed once, even with multiple callbacks.
-private final class ContinuationGuard: Sendable {
-    private let lock = OSAllocatedUnfairLock(initialState: false)
-    func resumeOnce(_ action: () -> Void) {
-        let shouldResume = lock.withLock { alreadyResumed -> Bool in
-            guard !alreadyResumed else { return false }
-            alreadyResumed = true
-            return true
-        }
-        if shouldResume { action() }
     }
 }

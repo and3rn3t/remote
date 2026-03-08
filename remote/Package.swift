@@ -13,14 +13,18 @@ let package = Package(
             targets: ["remote"]
         ),
     ],
+    dependencies: [
+        .package(path: "SharedModels"),
+    ],
     targets: [
         .target(
             name: "remote",
+            dependencies: ["SharedModels"],
             path: "remote"
         ),
         .testTarget(
             name: "remoteTests",
-            dependencies: ["remote"],
+            dependencies: ["remote", "SharedModels"],
             path: "remoteTests"
         ),
     ]

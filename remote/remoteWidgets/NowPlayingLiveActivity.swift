@@ -4,6 +4,7 @@
 //
 
 import ActivityKit
+import SharedModels
 import SwiftUI
 import WidgetKit
 

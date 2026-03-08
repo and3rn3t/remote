@@ -19,13 +19,18 @@ Native iOS remote control app for Denon AV Receivers. Built with SwiftUI, SwiftD
 
 ```
 remote/
+├── SharedModels/            # Local Swift package (shared between targets)
+│   ├── Package.swift
+│   └── Sources/SharedModels/
+│       ├── ReceiverStatus.swift      # Codable App Group shared state
+│       ├── NowPlayingAttributes.swift # ActivityKit attributes
+│       └── DenonCommandSender.swift  # Lightweight NWConnection TCP sender
 ├── remote/                  # Main app target
 │   ├── remoteApp.swift      # Entry point, SwiftData container
 │   ├── DenonAPI.swift       # @Observable TCP client, protocol implementation
 │   ├── DenonReceiver.swift  # SwiftData model
 │   ├── DenonConstants.swift # Protocol constants, input/surround maps
 │   ├── ReceiverScene.swift  # SwiftData scene/preset model
-│   ├── ReceiverStatus.swift # Codable App Group shared state
 │   ├── BonjourDiscovery.swift
 │   ├── ConnectionLogger.swift
 │   ├── ContentView.swift    # NavigationSplitView, receiver list
@@ -45,9 +50,7 @@ remote/
 ├── remoteWidgets/           # WidgetKit extension target
 │   ├── ReceiverWidgets.swift
 │   ├── NowPlayingLiveActivity.swift
-│   ├── TogglePowerIntent.swift
-│   ├── ReceiverStatus.swift      # Shared model (duplicate)
-│   └── NowPlayingAttributes.swift
+│   └── TogglePowerIntent.swift
 ├── remoteTests/             # Unit tests (Swift Testing)
 └── remoteUITests/           # UI tests (XCTest)
 ```
@@ -81,8 +84,9 @@ remote/
 
 - `DenonAPI` is the single source of truth for receiver state
 - Receiver state is synced to App Group `UserDefaults` (`group.dev.andernet.remote`) for widgets
+- Shared types (`ReceiverStatus`, `NowPlayingAttributes`, `DenonCommandSender`) live in the `SharedModels` local Swift package
 - SwiftData models use `.automatic` CloudKit configuration
-- Widget/Intent targets use lightweight `NWConnection` TCP — not `DenonAPI`
+- Widget/Intent targets use lightweight `DenonCommandSender` TCP — not `DenonAPI`
 
 ### Testing
 

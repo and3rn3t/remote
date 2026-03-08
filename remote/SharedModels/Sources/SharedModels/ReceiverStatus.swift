@@ -1,35 +1,53 @@
 //
 //  ReceiverStatus.swift
-//  remote
+//  SharedModels
 //
 
 import Foundation
 
-struct ReceiverStatus: Codable {
-    var receiverName: String
-    var ipAddress: String
-    var port: Int
-    var isPowerOn: Bool
-    var volume: Int
-    var currentInput: String
-    var lastUpdated: Date
+public struct ReceiverStatus: Codable, Sendable {
+    public var receiverName: String
+    public var ipAddress: String
+    public var port: Int
+    public var isPowerOn: Bool
+    public var volume: Int
+    public var currentInput: String
+    public var lastUpdated: Date
 
-    static let appGroupID = "group.dev.andernet.remote"
-    static let statusKey = "lastReceiverStatus"
+    public static let appGroupID = "group.dev.andernet.remote"
+    public static let statusKey = "lastReceiverStatus"
 
-    static func load() -> Self? {
+    public init(
+        receiverName: String,
+        ipAddress: String,
+        port: Int,
+        isPowerOn: Bool,
+        volume: Int,
+        currentInput: String,
+        lastUpdated: Date
+    ) {
+        self.receiverName = receiverName
+        self.ipAddress = ipAddress
+        self.port = port
+        self.isPowerOn = isPowerOn
+        self.volume = volume
+        self.currentInput = currentInput
+        self.lastUpdated = lastUpdated
+    }
+
+    public static func load() -> Self? {
         guard let defaults = UserDefaults(suiteName: Self.appGroupID),
               let data = defaults.data(forKey: Self.statusKey) else { return nil }
         return try? JSONDecoder().decode(Self.self, from: data)
     }
 
-    func save() {
+    public func save() {
         guard let defaults = UserDefaults(suiteName: Self.appGroupID),
               let data = try? JSONEncoder().encode(self) else { return }
         defaults.set(data, forKey: Self.statusKey)
     }
 
-    static let placeholder = Self(
+    public static let placeholder = Self(
         receiverName: "Receiver",
         ipAddress: "0.0.0.0",
         port: 23,
@@ -40,7 +58,7 @@ struct ReceiverStatus: Codable {
     )
 
     /// Human-readable display name for a Denon input code.
-    static func inputDisplayName(_ code: String) -> String {
+    public static func inputDisplayName(_ code: String) -> String {
         let mapping: [String: String] = [
             "BD": "Blu-ray", "GAME": "Game", "MPLAY": "Media Player",
             "TV": "TV Audio", "SAT/CBL": "Cable/Sat", "DVD": "DVD",

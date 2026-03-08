@@ -177,6 +177,7 @@
 			);
 			name = remote;
 			packageProductDependencies = (
+				3DE7CA162F5CB01600103521 /* SharedModels */,
 			);
 			productName = remote;
 			productReference = 3DE7C9A92F5CADBC00103521 /* remote.app */;
@@ -200,8 +201,8 @@
 			);
 			name = remoteTests;
 			packageProductDependencies = (
+				3DE7CA182F5CB01800103521 /* SharedModels */,
 			);
-			productName = remoteTests;
 			productReference = 3DE7C9BA2F5CADBD00103521 /* remoteTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -245,8 +246,8 @@
 			);
 			name = remoteWidgets;
 			packageProductDependencies = (
+				3DE7CA172F5CB01700103521 /* SharedModels */,
 			);
-			productName = remoteWidgets;
 			productReference = 3DE7CA042F5CB00400103521 /* remoteWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
@@ -286,6 +287,9 @@
 			mainGroup = 3DE7C9A02F5CADBC00103521;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				3DE7CA152F5CB01500103521 /* XCLocalSwiftPackageReference "SharedModels" */,
+			);
 			productRefGroup = 3DE7C9AA2F5CADBC00103521 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -761,6 +765,28 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		3DE7CA152F5CB01500103521 /* XCLocalSwiftPackageReference "SharedModels" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = SharedModels;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3DE7CA162F5CB01600103521 /* SharedModels */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SharedModels;
+		};
+		3DE7CA172F5CB01700103521 /* SharedModels */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SharedModels;
+		};
+		3DE7CA182F5CB01800103521 /* SharedModels */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SharedModels;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3DE7C9A12F5CADBC00103521 /* Project object */;
 }

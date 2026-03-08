@@ -5,6 +5,7 @@
 
 import WidgetKit
 import SwiftUI
+import SharedModels
 import AppIntents
 
 // MARK: - Timeline Provider

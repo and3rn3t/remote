@@ -7,6 +7,7 @@
 
 import Foundation
 import Observation
+import SharedModels
 import WidgetKit
 import ActivityKit
 

@@ -7,6 +7,7 @@
 
 import Testing
 import Foundation
+import SharedModels
 import SwiftData
 @testable import remote
 
