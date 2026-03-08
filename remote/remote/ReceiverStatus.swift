@@ -17,10 +17,10 @@ struct ReceiverStatus: Codable {
     static let appGroupID = "group.dev.andernet.remote"
     static let statusKey = "lastReceiverStatus"
 
-    static func load() -> ReceiverStatus? {
-        guard let defaults = UserDefaults(suiteName: appGroupID),
-              let data = defaults.data(forKey: statusKey) else { return nil }
-        return try? JSONDecoder().decode(ReceiverStatus.self, from: data)
+    static func load() -> Self? {
+        guard let defaults = UserDefaults(suiteName: Self.appGroupID),
+              let data = defaults.data(forKey: Self.statusKey) else { return nil }
+        return try? JSONDecoder().decode(Self.self, from: data)
     }
 
     func save() {

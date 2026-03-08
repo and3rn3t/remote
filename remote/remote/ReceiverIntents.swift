@@ -173,7 +173,7 @@ enum IntentCommandSender {
     static func send(_ command: String, to host: String, port: Int) async -> Bool {
         await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             let queue = DispatchQueue(label: "dev.andernet.remote.intent.tcp")
-            let guard_ = IntentContinuationGuard()
+            let continuationGuard = IntentContinuationGuard()
 
             let connection = NWConnection(
                 host: NWEndpoint.Host(host),
@@ -187,13 +187,13 @@ enum IntentCommandSender {
                     let data = Data("\(command)\r".utf8)
                     connection.send(content: data, completion: .contentProcessed { _ in
                         connection.cancel()
-                        guard_.resumeOnce { continuation.resume(returning: true) }
+                        continuationGuard.resumeOnce { continuation.resume(returning: true) }
                     })
                 case .failed:
                     connection.cancel()
-                    guard_.resumeOnce { continuation.resume(returning: false) }
+                    continuationGuard.resumeOnce { continuation.resume(returning: false) }
                 case .cancelled:
-                    guard_.resumeOnce { continuation.resume(returning: false) }
+                    continuationGuard.resumeOnce { continuation.resume(returning: false) }
                 default:
                     break
                 }
@@ -203,15 +203,15 @@ enum IntentCommandSender {
 
             queue.asyncAfter(deadline: .now() + 3) {
                 connection.cancel()
-                guard_.resumeOnce { continuation.resume(returning: false) }
+                continuationGuard.resumeOnce { continuation.resume(returning: false) }
             }
         }
     }
 }
 
 private final class IntentContinuationGuard: Sendable {
-    private let lock = NSLock()
-    private nonisolated(unsafe) var resumed = false
+    nonisolated(unsafe) private let lock = NSLock()
+    nonisolated(unsafe) private var resumed = false
     nonisolated func resumeOnce(_ action: () -> Void) {
         lock.lock()
         defer { lock.unlock() }

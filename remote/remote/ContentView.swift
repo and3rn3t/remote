@@ -11,7 +11,7 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \DenonReceiver.lastConnected, order: .reverse) private var receivers: [DenonReceiver]
-    
+
     @State private var showingAddReceiver = false
     @State private var showingAppSettings = false
     @State private var selectedReceiver: DenonReceiver?
@@ -43,9 +43,9 @@ struct ContentView: View {
             }
         }
     }
-    
+
     // MARK: - Receivers List
-    
+
     private var receiversList: some View {
         List(selection: $selectedReceiver) {
             Section {
@@ -71,7 +71,7 @@ struct ContentView: View {
                     Label("Add Receiver", systemImage: "plus")
                 }
             }
-            
+
             ToolbarItem(id: "filter", placement: .primaryAction) {
                 Button {
                     withAnimation { showFavoritesOnly.toggle() }
@@ -80,7 +80,7 @@ struct ContentView: View {
                 }
                 .accessibilityLabel(showFavoritesOnly ? "Show all receivers" : "Show favorites only")
             }
-            
+
             ToolbarItem(id: "settings", placement: .navigationBarLeading) {
                 Button {
                     showingAppSettings = true
@@ -88,7 +88,7 @@ struct ContentView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
             }
-            
+
             ToolbarItem(id: "edit", placement: .navigationBarTrailing) {
                 EditButton()
             }
@@ -104,7 +104,7 @@ struct ContentView: View {
             autoConnectIfNeeded()
         }
     }
-    
+
     private var emptyDetailView: some View {
         ContentUnavailableView {
             Label("No Receiver Selected", systemImage: "hifispeaker.2")
@@ -121,7 +121,7 @@ struct ContentView: View {
     }
 
     // MARK: - Actions
-    
+
     private func deleteReceivers(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
@@ -129,7 +129,7 @@ struct ContentView: View {
             }
         }
     }
-    
+
     private func autoConnectIfNeeded() {
         guard AppSettings.autoConnectLastReceiver,
               !AppSettings.lastConnectedReceiverID.isEmpty,
@@ -145,21 +145,21 @@ struct ContentView: View {
 
 struct ReceiverRowView: View {
     let receiver: DenonReceiver
-    
+
     var body: some View {
         HStack {
             Image(systemName: receiver.isFavorite ? "star.fill" : "hifispeaker.2")
                 .foregroundStyle(receiver.isFavorite ? .yellow : .secondary)
                 .font(.title2)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(receiver.name)
                     .font(.headline)
-                
+
                 Text(receiver.ipAddress)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 if let lastConnected = receiver.lastConnected {
                     Text("Last connected \(lastConnected, format: .relative(presentation: .named))")
                         .font(.caption)
@@ -176,12 +176,12 @@ struct AddReceiverView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var existingReceivers: [DenonReceiver]
-    
+
     @State private var name = ""
     @State private var ipAddress = ""
     @State private var port = "23"
     @State private var discovery = BonjourDiscovery()
-    
+
     private var ipValidationError: String? {
         guard !ipAddress.isEmpty else { return nil }
         let parts = ipAddress.split(separator: ".", omittingEmptySubsequences: false)
@@ -193,7 +193,7 @@ struct AddReceiverView: View {
         }
         return nil
     }
-    
+
     private var portValidationError: String? {
         guard !port.isEmpty else { return nil }
         guard let portNum = Int(port), (1...65535).contains(portNum) else {
@@ -201,19 +201,19 @@ struct AddReceiverView: View {
         }
         return nil
     }
-    
+
     private var duplicateError: String? {
         guard !ipAddress.isEmpty else { return nil }
         let portValue = Int(port) ?? 23
         let isDuplicate = existingReceivers.contains { $0.ipAddress == ipAddress && $0.port == portValue }
         return isDuplicate ? "A receiver with this IP and port already exists" : nil
     }
-    
+
     private var isFormValid: Bool {
         !name.isEmpty && !ipAddress.isEmpty && ipValidationError == nil
             && portValidationError == nil && duplicateError == nil
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -232,13 +232,13 @@ struct AddReceiverView: View {
                             Label("Scan for Receivers", systemImage: "antenna.radiowaves.left.and.right")
                         }
                     }
-                    
+
                     if let error = discovery.errorMessage {
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(.red)
                     }
-                    
+
                     ForEach(discovery.discoveredReceivers) { discovered in
                         Button {
                             addDiscoveredReceiver(discovered)
@@ -267,32 +267,32 @@ struct AddReceiverView: View {
                         Text("Tap Scan to find Denon receivers on your network, or add one manually below.")
                     }
                 }
-                
+
                 // MARK: - Manual Entry Section
                 Section {
                     TextField("Name", text: $name)
                         .textContentType(.name)
-                    
+
                     TextField("IP Address", text: $ipAddress)
                         .textContentType(.none)
                         .keyboardType(.decimalPad)
                         .autocorrectionDisabled()
-                    
+
                     if let error = ipValidationError {
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(.red)
                     }
-                    
+
                     TextField("Port", text: $port)
                         .keyboardType(.numberPad)
-                    
+
                     if let error = portValidationError {
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(.red)
                     }
-                    
+
                     if let error = duplicateError {
                         Text(error)
                             .font(.caption)
@@ -313,7 +313,7 @@ struct AddReceiverView: View {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") {
                         addReceiver()
@@ -326,7 +326,7 @@ struct AddReceiverView: View {
             }
         }
     }
-    
+
     private func addReceiver() {
         guard isFormValid else { return }
         withAnimation {
@@ -336,14 +336,14 @@ struct AddReceiverView: View {
             dismiss()
         }
     }
-    
+
     private func addDiscoveredReceiver(_ discovered: DiscoveredReceiver) {
         // Check for duplicates before adding
         let isDuplicate = existingReceivers.contains {
             $0.ipAddress == discovered.host && $0.port == discovered.port
         }
         guard !isDuplicate else { return }
-        
+
         withAnimation {
             let receiver = DenonReceiver(
                 name: discovered.name,

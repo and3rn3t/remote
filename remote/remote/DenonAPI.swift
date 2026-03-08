@@ -24,7 +24,7 @@ struct NowPlayingInfo {
     var line2: String = ""  // NSE2 — e.g. album
     var line3: String = ""  // NSE3 — e.g. track name
     var line4: String = ""  // NSE4 — extra info
-    
+
     var isEmpty: Bool {
         line1.isEmpty && line2.isEmpty && line3.isEmpty && line4.isEmpty
     }
@@ -37,25 +37,25 @@ struct DenonState {
     var isMuted: Bool = false
     var currentInput: String = "Unknown"
     var surroundMode: String = "Unknown"
-    
+
     // Zone 2/3
     var zone2 = ZoneState()
     var zone3 = ZoneState()
-    
+
     // Now Playing
     var nowPlaying = NowPlayingInfo()
-    
+
     // Sleep Timer (minutes remaining, nil = off)
-    var sleepTimer: Int? = nil
-    
+    var sleepTimer: Int?
+
     // Tone/EQ (raw protocol values: 44–56, where 50 = 0 dB)
     var bass: Int = 50
     var treble: Int = 50
-    
+
     // Dynamic Volume (OFF, LIT, MED, HEV)
     var dynamicVolume: String = "OFF"
     var dynamicEQ: Bool = false
-    
+
     // Receiver Info
     var receiverModel: String = ""
     var firmwareVersion: String = ""
@@ -69,7 +69,7 @@ final class DenonAPI {
     var errorMessage: String?
     var isReconnecting = false
     var currentReconnectAttempt = 0
-    
+
     private var receiver: DenonReceiver?
     private var inputStream: InputStream?
     private var outputStream: OutputStream?
@@ -79,24 +79,24 @@ final class DenonAPI {
     private static let maxReconnectAttempts = 5
     private let logger = ConnectionLogger.shared
     private let liveActivity = LiveActivityManager.shared
-    
+
     /// Timeout for establishing a TCP connection, in seconds.
     var connectionTimeout: TimeInterval = 5.0
-    
+
     // MARK: - Connection Management
-    
+
     func connect(to receiver: DenonReceiver) async throws {
         self.receiver = receiver
         reconnectAttempts = 0
         logger.log("Connecting to \(receiver.name) at \(receiver.ipAddress):\(receiver.port)", category: .connection)
         try await establishConnection(to: receiver)
     }
-    
+
     private func establishConnection(to receiver: DenonReceiver) async throws {
         // Open TCP connection to receiver
         var readStream: Unmanaged<CFReadStream>?
         var writeStream: Unmanaged<CFWriteStream>?
-        
+
         CFStreamCreatePairWithSocketToHost(
             kCFAllocatorDefault,
             receiver.ipAddress as CFString,
@@ -104,19 +104,19 @@ final class DenonAPI {
             &readStream,
             &writeStream
         )
-        
+
         guard let readStream = readStream?.takeRetainedValue(),
               let writeStream = writeStream?.takeRetainedValue() else {
             logger.log("Stream creation failed", category: .error)
             throw DenonError.connectionFailed
         }
-        
+
         inputStream = readStream as InputStream
         outputStream = writeStream as OutputStream
-        
+
         inputStream?.open()
         outputStream?.open()
-        
+
         // Wait for streams to open with timeout
         let deadline = Date().addingTimeInterval(connectionTimeout)
         while Date() < deadline {
@@ -130,25 +130,25 @@ final class DenonAPI {
             }
             try await Task.sleep(for: .milliseconds(100))
         }
-        
+
         // Check if connection succeeded
         guard inputStream?.streamStatus == .open && outputStream?.streamStatus == .open else {
             cleanupStreams()
             logger.log("Connection timed out after \(connectionTimeout)s", category: .error)
             throw DenonError.connectionTimeout
         }
-        
+
         isConnected = true
         errorMessage = nil
         logger.log("Connected successfully", category: .connection)
-        
+
         // Start monitoring connection health
         startConnectionMonitor()
-        
+
         // Query initial state
         try await refreshState()
     }
-    
+
     func disconnect() {
         logger.log("Disconnecting", category: .connection)
         connectionMonitorTask?.cancel()
@@ -158,29 +158,29 @@ final class DenonAPI {
         reconnectAttempts = 0
         liveActivity.end()
     }
-    
+
     private func cleanupStreams() {
         inputStream?.close()
         outputStream?.close()
         inputStream = nil
         outputStream = nil
     }
-    
+
     // MARK: - Connection Monitoring & Reconnection
-    
+
     private func startConnectionMonitor() {
         connectionMonitorTask?.cancel()
         connectionMonitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(10))
                 guard !Task.isCancelled else { return }
-                
+
                 guard let self else { return }
-                
+
                 // Check if streams are still healthy
                 let inputOk = self.inputStream?.streamStatus == .open
                 let outputOk = self.outputStream?.streamStatus == .open
-                
+
                 if self.isConnected && (!inputOk || !outputOk) {
                     self.isConnected = false
                     self.errorMessage = DenonError.disconnected.localizedDescription
@@ -190,7 +190,7 @@ final class DenonAPI {
             }
         }
     }
-    
+
     private func attemptReconnect() async {
         guard let receiver, reconnectAttempts < Self.maxReconnectAttempts else {
             logger.log("Reconnection failed after \(Self.maxReconnectAttempts) attempts", category: .error)
@@ -198,23 +198,23 @@ final class DenonAPI {
             isReconnecting = false
             return
         }
-        
+
         reconnectAttempts += 1
         currentReconnectAttempt = reconnectAttempts
         isReconnecting = true
         logger.log("Reconnect attempt \(reconnectAttempts)/\(Self.maxReconnectAttempts)", category: .connection)
-        
+
         // Exponential backoff: 1s, 2s, 4s, 8s, 16s
         let delay = pow(2.0, Double(reconnectAttempts - 1))
         try? await Task.sleep(for: .seconds(delay))
-        
+
         guard !Task.isCancelled else {
             isReconnecting = false
             return
         }
-        
+
         cleanupStreams()
-        
+
         do {
             try await establishConnection(to: receiver)
             reconnectAttempts = 0
@@ -228,30 +228,30 @@ final class DenonAPI {
             }
         }
     }
-    
+
     // MARK: - Command Sending
-    
+
     private func sendCommand(_ command: String) async throws {
         guard isConnected, let outputStream = outputStream else {
             throw DenonError.notConnected
         }
-        
+
         let commandString = "\(command)\r"
         let data = Array(commandString.utf8)
-        
+
         logger.log("TX: \(command)", category: .command)
         let bytesWritten = outputStream.write(data, maxLength: data.count)
-        
+
         if bytesWritten < 0 {
             throw DenonError.commandFailed
         }
-        
+
         // Brief delay to allow receiver to process
         try await Task.sleep(for: .milliseconds(100))
     }
-    
+
     // MARK: - State Queries
-    
+
     func refreshState() async throws {
         try await sendCommand("PW?")
         try await sendCommand("MV?")
@@ -263,15 +263,15 @@ final class DenonAPI {
         try await sendCommand("PSTRE ?")
         try await sendCommand("PSDYNVOL ?")
         try await sendCommand("PSDYNEQ ?")
-        
+
         // Read responses
         try await Task.sleep(for: .milliseconds(500))
         readResponses()
     }
-    
+
     private func readResponses() {
         guard let inputStream = inputStream else { return }
-        
+
         while inputStream.hasBytesAvailable {
             let bytesRead = inputStream.read(&readBuffer, maxLength: readBuffer.count)
             if bytesRead > 0 {
@@ -284,7 +284,7 @@ final class DenonAPI {
         updateWidgetStatus()
         updateLiveActivity()
     }
-    
+
     private func updateWidgetStatus() {
         guard let receiver else { return }
         ReceiverStatus(
@@ -298,7 +298,7 @@ final class DenonAPI {
         ).save()
         WidgetCenter.shared.reloadTimelines(ofKind: "ReceiverStatusWidget")
     }
-    
+
     private func updateLiveActivity() {
         guard let receiver, isConnected, isNetworkSource else {
             // End activity if not connected or not on a network source
@@ -317,7 +317,7 @@ final class DenonAPI {
             volume: state.volume
         )
     }
-    
+
     private func parseResponse(_ response: String) {
         parseResponseImpl(response)
     }
@@ -330,11 +330,11 @@ final class DenonAPI {
 
     private func parseResponseImpl(_ response: String) {
         let lines = response.components(separatedBy: "\r")
-        
+
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
-            
+
             // Zone 3 (check before Zone 2 since Z3 is a longer prefix)
             if trimmed.hasPrefix("Z3") {
                 parseZone3Response(trimmed)
@@ -380,7 +380,7 @@ final class DenonAPI {
             }
         }
     }
-    
+
     private func parseZone2Response(_ line: String) {
         if line == "Z2ON" {
             state.zone2.isPowerOn = true
@@ -401,7 +401,7 @@ final class DenonAPI {
             }
         }
     }
-    
+
     private func parseZone3Response(_ line: String) {
         if line == "Z3ON" {
             state.zone3.isPowerOn = true
@@ -420,7 +420,7 @@ final class DenonAPI {
             }
         }
     }
-    
+
     private func parseNowPlayingResponse(_ line: String) {
         // NSE0 = playback status, NSE1-4 = display lines
         if line.hasPrefix("NSE1") {
@@ -433,7 +433,7 @@ final class DenonAPI {
             state.nowPlaying.line4 = String(line.dropFirst(4))
         }
     }
-    
+
     private func parseSleepTimerResponse(_ line: String) {
         // SLPOFF or SLP030, SLP060, SLP090, SLP120
         let value = line.replacingOccurrences(of: "SLP", with: "")
@@ -443,7 +443,7 @@ final class DenonAPI {
             state.sleepTimer = minutes
         }
     }
-    
+
     private func parseParameterResponse(_ line: String) {
         if line.hasPrefix("PSBAS") {
             let value = line.replacingOccurrences(of: "PSBAS ", with: "")
@@ -463,7 +463,7 @@ final class DenonAPI {
             state.dynamicEQ = (value == "ON")
         }
     }
-    
+
     private func parseReceiverInfoResponse(_ line: String) {
         // SSINFAISMD <model> or SSINFAISFSV <firmware>
         if line.hasPrefix("SSINFAISMD ") {
@@ -472,21 +472,21 @@ final class DenonAPI {
             state.firmwareVersion = line.replacingOccurrences(of: "SSINFAISFSV ", with: "")
         }
     }
-    
+
     // MARK: - Control Methods
-    
+
     func setPower(_ on: Bool) async throws {
         try await sendCommand(on ? "PWON" : "PWSTANDBY")
         state.isPowerOn = on
     }
-    
+
     func setVolume(_ volume: Int) async throws {
         let clampedVolume = min(max(volume, 0), 98)
         let volumeString = String(format: "%02d", clampedVolume)
         try await sendCommand("MV\(volumeString)")
         state.volume = clampedVolume
     }
-    
+
     func volumeUp() async throws {
         try await sendCommand("MVUP")
         try await Task.sleep(for: .milliseconds(200))
@@ -494,7 +494,7 @@ final class DenonAPI {
         try await Task.sleep(for: .milliseconds(100))
         readResponses()
     }
-    
+
     func volumeDown() async throws {
         try await sendCommand("MVDOWN")
         try await Task.sleep(for: .milliseconds(200))
@@ -502,12 +502,12 @@ final class DenonAPI {
         try await Task.sleep(for: .milliseconds(100))
         readResponses()
     }
-    
+
     func setMute(_ muted: Bool) async throws {
         try await sendCommand(muted ? "MUON" : "MUOFF")
         state.isMuted = muted
     }
-    
+
     func setInput(_ input: String) async throws {
         try await sendCommand("SI\(input)")
         state.currentInput = input
@@ -517,34 +517,34 @@ final class DenonAPI {
             liveActivity.end()
         }
     }
-    
+
     // MARK: - Surround Mode
-    
+
     func setSurroundMode(_ mode: String) async throws {
         try await sendCommand("MS\(mode)")
         state.surroundMode = mode
     }
-    
+
     func querySurroundMode() async throws {
         try await sendCommand("MS?")
         try await Task.sleep(for: .milliseconds(300))
         readResponses()
     }
-    
+
     // MARK: - Zone 2 Controls
-    
+
     func setZone2Power(_ on: Bool) async throws {
         try await sendCommand(on ? "Z2ON" : "Z2OFF")
         state.zone2.isPowerOn = on
     }
-    
+
     func setZone2Volume(_ volume: Int) async throws {
         let clamped = min(max(volume, 0), 98)
         let volumeString = String(format: "%02d", clamped)
         try await sendCommand("Z2\(volumeString)")
         state.zone2.volume = clamped
     }
-    
+
     func zone2VolumeUp() async throws {
         try await sendCommand("Z2UP")
         try await Task.sleep(for: .milliseconds(200))
@@ -552,7 +552,7 @@ final class DenonAPI {
         try await Task.sleep(for: .milliseconds(100))
         readResponses()
     }
-    
+
     func zone2VolumeDown() async throws {
         try await sendCommand("Z2DOWN")
         try await Task.sleep(for: .milliseconds(200))
@@ -560,38 +560,38 @@ final class DenonAPI {
         try await Task.sleep(for: .milliseconds(100))
         readResponses()
     }
-    
+
     func setZone2Mute(_ muted: Bool) async throws {
         try await sendCommand(muted ? "Z2MUON" : "Z2MUOFF")
         state.zone2.isMuted = muted
     }
-    
+
     func setZone2Input(_ input: String) async throws {
         try await sendCommand("Z2\(input)")
         state.zone2.currentInput = input
     }
-    
+
     func refreshZone2State() async throws {
         try await sendCommand("Z2?")
         try await sendCommand("Z2MU?")
         try await Task.sleep(for: .milliseconds(500))
         readResponses()
     }
-    
+
     // MARK: - Zone 3 Controls
-    
+
     func setZone3Power(_ on: Bool) async throws {
         try await sendCommand(on ? "Z3ON" : "Z3OFF")
         state.zone3.isPowerOn = on
     }
-    
+
     func setZone3Volume(_ volume: Int) async throws {
         let clamped = min(max(volume, 0), 98)
         let volumeString = String(format: "%02d", clamped)
         try await sendCommand("Z3\(volumeString)")
         state.zone3.volume = clamped
     }
-    
+
     func zone3VolumeUp() async throws {
         try await sendCommand("Z3UP")
         try await Task.sleep(for: .milliseconds(200))
@@ -599,7 +599,7 @@ final class DenonAPI {
         try await Task.sleep(for: .milliseconds(100))
         readResponses()
     }
-    
+
     func zone3VolumeDown() async throws {
         try await sendCommand("Z3DOWN")
         try await Task.sleep(for: .milliseconds(200))
@@ -607,34 +607,34 @@ final class DenonAPI {
         try await Task.sleep(for: .milliseconds(100))
         readResponses()
     }
-    
+
     func setZone3Mute(_ muted: Bool) async throws {
         try await sendCommand(muted ? "Z3MUON" : "Z3MUOFF")
         state.zone3.isMuted = muted
     }
-    
+
     func setZone3Input(_ input: String) async throws {
         try await sendCommand("Z3\(input)")
         state.zone3.currentInput = input
     }
-    
+
     func refreshZone3State() async throws {
         try await sendCommand("Z3?")
         try await sendCommand("Z3MU?")
         try await Task.sleep(for: .milliseconds(500))
         readResponses()
     }
-    
+
     // MARK: - Now Playing
-    
+
     func refreshNowPlaying() async throws {
         try await sendCommand("NSE")
         try await Task.sleep(for: .milliseconds(500))
         readResponses()
     }
-    
+
     // MARK: - Sleep Timer
-    
+
     static let sleepTimerOptions: [(name: String, value: String)] = [
         ("Off", "OFF"),
         ("30 min", "030"),
@@ -642,7 +642,7 @@ final class DenonAPI {
         ("90 min", "090"),
         ("120 min", "120"),
     ]
-    
+
     func setSleepTimer(_ value: String) async throws {
         try await sendCommand("SLP\(value)")
         if value == "OFF" {
@@ -651,104 +651,104 @@ final class DenonAPI {
             state.sleepTimer = minutes
         }
     }
-    
+
     func querySleepTimer() async throws {
         try await sendCommand("SLP?")
         try await Task.sleep(for: .milliseconds(300))
         readResponses()
     }
-    
+
     // MARK: - Tone / EQ Controls
-    
+
     /// Set bass level. Raw protocol value: 44 (-6 dB) to 56 (+6 dB), 50 = 0 dB.
     func setBass(_ value: Int) async throws {
         let clamped = min(max(value, 44), 56)
         try await sendCommand("PSBAS \(String(format: "%02d", clamped))")
         state.bass = clamped
     }
-    
+
     /// Set treble level. Raw protocol value: 44 (-6 dB) to 56 (+6 dB), 50 = 0 dB.
     func setTreble(_ value: Int) async throws {
         let clamped = min(max(value, 44), 56)
         try await sendCommand("PSTRE \(String(format: "%02d", clamped))")
         state.treble = clamped
     }
-    
+
     func queryToneControls() async throws {
         try await sendCommand("PSBAS ?")
         try await sendCommand("PSTRE ?")
         try await Task.sleep(for: .milliseconds(300))
         readResponses()
     }
-    
+
     // MARK: - Dynamic Volume / Dynamic EQ
-    
+
     static let dynamicVolumeOptions: [(name: String, code: String)] = [
         ("Off", "OFF"),
         ("Light", "LIT"),
         ("Medium", "MED"),
         ("Heavy", "HEV"),
     ]
-    
+
     func setDynamicVolume(_ mode: String) async throws {
         try await sendCommand("PSDYNVOL \(mode)")
         state.dynamicVolume = mode
     }
-    
+
     func setDynamicEQ(_ enabled: Bool) async throws {
         try await sendCommand("PSDYNEQ \(enabled ? "ON" : "OFF")")
         state.dynamicEQ = enabled
     }
-    
+
     func queryDynamicSettings() async throws {
         try await sendCommand("PSDYNVOL ?")
         try await sendCommand("PSDYNEQ ?")
         try await Task.sleep(for: .milliseconds(300))
         readResponses()
     }
-    
+
     // MARK: - Tuner Presets
-    
+
     func tunerPresetUp() async throws {
         try await sendCommand("TPANUP")
     }
-    
+
     func tunerPresetDown() async throws {
         try await sendCommand("TPANDOWN")
     }
-    
+
     /// Returns true if the current input is the tuner.
     var isTunerActive: Bool {
         state.currentInput == "TUNER"
     }
-    
+
     // MARK: - Receiver Info
-    
+
     func queryReceiverInfo() async throws {
         try await sendCommand("SSINFAISMD ?")
         try await sendCommand("SSINFAISFSV ?")
         try await Task.sleep(for: .milliseconds(500))
         readResponses()
     }
-    
+
     // MARK: - Transport Controls (Network Sources)
-    
+
     func transportPlay() async throws {
         try await sendCommand("NS9A")
     }
-    
+
     func transportPause() async throws {
         try await sendCommand("NS9B")
     }
-    
+
     func transportStop() async throws {
         try await sendCommand("NS9C")
     }
-    
+
     func transportSkipNext() async throws {
         try await sendCommand("NS9D")
     }
-    
+
     func transportSkipPrevious() async throws {
         try await sendCommand("NS9E")
     }
@@ -772,7 +772,7 @@ extension DenonAPI {
         ("Network", "NET"),
         ("Spotify", "SPOTIFY"),
     ]
-    
+
     static let availableSurroundModes: [(name: String, code: String)] = [
         ("Stereo", "STEREO"),
         ("Direct", "DIRECT"),
@@ -793,7 +793,7 @@ extension DenonAPI {
         ("Virtual", "VIRTUAL"),
         ("Auto", "AUTO"),
     ]
-    
+
     /// Returns true if the current input is a network-based source that may support now playing.
     var isNetworkSource: Bool {
         let networkInputs = ["NET", "SPOTIFY", "BT", "USB/IPOD", "MPLAY"]
@@ -811,7 +811,7 @@ enum DenonError: LocalizedError {
     case disconnected
     case commandFailed
     case invalidResponse
-    
+
     var errorDescription: String? {
         switch self {
         case .connectionFailed:
@@ -830,7 +830,7 @@ enum DenonError: LocalizedError {
             return "Invalid response from receiver"
         }
     }
-    
+
     var recoverySuggestion: String? {
         switch self {
         case .connectionFailed, .connectionRefused:

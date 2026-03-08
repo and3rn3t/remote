@@ -36,7 +36,7 @@ enum DenonCommandSender {
     static func send(_ command: String, to host: String, port: Int) async -> Bool {
         await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             let queue = DispatchQueue(label: "dev.andernet.remote.widget.tcp")
-            let guard_ = ContinuationGuard()
+            let continuationGuard = ContinuationGuard()
 
             let connection = NWConnection(
                 host: NWEndpoint.Host(host),
@@ -50,13 +50,13 @@ enum DenonCommandSender {
                     let data = Data("\(command)\r".utf8)
                     connection.send(content: data, completion: .contentProcessed { _ in
                         connection.cancel()
-                        guard_.resumeOnce { continuation.resume(returning: true) }
+                        continuationGuard.resumeOnce { continuation.resume(returning: true) }
                     })
                 case .failed:
                     connection.cancel()
-                    guard_.resumeOnce { continuation.resume(returning: false) }
+                    continuationGuard.resumeOnce { continuation.resume(returning: false) }
                 case .cancelled:
-                    guard_.resumeOnce { continuation.resume(returning: false) }
+                    continuationGuard.resumeOnce { continuation.resume(returning: false) }
                 default:
                     break
                 }
@@ -67,7 +67,7 @@ enum DenonCommandSender {
             // Timeout after 3 seconds
             queue.asyncAfter(deadline: .now() + 3) {
                 connection.cancel()
-                guard_.resumeOnce { continuation.resume(returning: false) }
+                continuationGuard.resumeOnce { continuation.resume(returning: false) }
             }
         }
     }

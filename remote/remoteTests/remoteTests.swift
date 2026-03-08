@@ -239,7 +239,7 @@ struct NowPlayingParsingTests {
         let api = DenonAPI()
         api.parseResponseForTesting("NSE3Track Only\r")
         #expect(api.state.nowPlaying.line3 == "Track Only")
-        #expect(api.state.nowPlaying.line1 == "")
+        #expect(api.state.nowPlaying.line1.isEmpty)
         #expect(api.state.nowPlaying.isEmpty == false)
     }
 
@@ -266,10 +266,10 @@ struct SurroundModeTests {
         let api = DenonAPI()
         api.state.currentInput = "NET"
         #expect(api.isNetworkSource == true)
-        
+
         api.state.currentInput = "BD"
         #expect(api.isNetworkSource == false)
-        
+
         api.state.currentInput = "SPOTIFY"
         #expect(api.isNetworkSource == true)
     }
@@ -450,8 +450,8 @@ struct ReceiverInfoTests {
 
     @Test func receiverInfoDefaultsEmpty() {
         let state = DenonState()
-        #expect(state.receiverModel == "")
-        #expect(state.firmwareVersion == "")
+        #expect(state.receiverModel.isEmpty)
+        #expect(state.firmwareVersion.isEmpty)
     }
 }
 
@@ -463,7 +463,7 @@ struct TunerTests {
         let api = DenonAPI()
         api.state.currentInput = "TUNER"
         #expect(api.isTunerActive == true)
-        
+
         api.state.currentInput = "BD"
         #expect(api.isTunerActive == false)
     }

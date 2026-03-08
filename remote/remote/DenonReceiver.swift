@@ -17,7 +17,7 @@ final class DenonReceiver {
     var isFavorite: Bool
     var lastConnected: Date?
     var volumeLimit: Int
-    
+
     init(name: String, ipAddress: String, port: Int = 23, isFavorite: Bool = false, volumeLimit: Int = 80) {
         self.id = UUID()
         self.name = name

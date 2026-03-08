@@ -12,18 +12,18 @@ import UIKit
 struct ReceiverControlView: View {
     @Environment(\.modelContext) private var modelContext
     let receiver: DenonReceiver
-    
+
     @State private var api = DenonAPI()
     @State private var isConnecting = false
     @State private var showingError = false
     @State private var showingSettings = false
     @State private var selectedZone = 0  // 0 = Main, 1 = Zone 2, 2 = Zone 3
     @State private var volumeDebounceTask: Task<Void, Never>?
-    
+
     @State private var toneDebounceTask: Task<Void, Never>?
     @State private var showingScenes = false
     @State private var showingSaveScene = false
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -65,31 +65,31 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Connected View
-    
+
     private var connectedView: some View {
         VStack(spacing: 24) {
             // Zone Picker
             zonePicker
-            
+
             if selectedZone == 0 {
                 // Main Zone
                 powerControl
                 volumeControl
                 inputSelection
                 surroundModeSection
-                
+
                 // Now Playing (only for network sources)
                 if api.isNetworkSource {
                     nowPlayingSection
                 }
-                
+
                 // Tuner presets (only when tuner is active)
                 if api.isTunerActive {
                     tunerPresetsSection
                 }
-                
+
                 toneControlSection
                 dynamicSettingsSection
                 sleepTimerSection
@@ -123,7 +123,7 @@ struct ReceiverControlView: View {
         }
         .animation(.smooth, value: selectedZone)
     }
-    
+
     private var powerControl: some View {
         GlassEffectContainer(spacing: 20.0) {
             VStack(spacing: 16) {
@@ -131,12 +131,12 @@ struct ReceiverControlView: View {
                     Image(systemName: "power")
                         .font(.title2)
                         .foregroundStyle(api.state.isPowerOn ? .green : .secondary)
-                    
+
                     Text(api.state.isPowerOn ? "Powered On" : "Standby")
                         .font(.headline)
-                    
+
                     Spacer()
-                    
+
                     Toggle("", isOn: Binding(
                         get: { api.state.isPowerOn },
                         set: { newValue in
@@ -160,7 +160,7 @@ struct ReceiverControlView: View {
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
         }
     }
-    
+
     private var volumeControl: some View {
         GlassEffectContainer(spacing: 20.0) {
             VStack(spacing: 20) {
@@ -169,17 +169,17 @@ struct ReceiverControlView: View {
                     Image(systemName: api.state.isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
                         .font(.title2)
                         .foregroundStyle(api.state.isMuted ? .red : .blue)
-                    
+
                     Text("Volume")
                         .font(.headline)
-                    
+
                     Spacer()
-                    
+
                     Text("\(api.state.volume)")
                         .font(.title2.bold())
                         .foregroundStyle(.primary)
                 }
-                
+
                 // Volume Slider
                 VStack(spacing: 12) {
                     Slider(
@@ -207,7 +207,7 @@ struct ReceiverControlView: View {
                     .accessibilityLabel("Volume")
                     .accessibilityValue("\(api.state.volume) decibels")
                     .accessibilityHint("Adjusts volume from 0 to \(receiver.volumeLimit)")
-                    
+
                     // Volume buttons
                     HStack(spacing: 16) {
                         Button {
@@ -228,7 +228,7 @@ struct ReceiverControlView: View {
                         .buttonStyle(.glass)
                         .glassEffect(.regular.interactive(), in: .circle)
                         .accessibilityLabel("Volume Down")
-                        
+
                         Button {
                             playHaptic(.light)
                             Task {
@@ -249,7 +249,7 @@ struct ReceiverControlView: View {
                         .accessibilityLabel(api.state.isMuted ? "Unmute" : "Mute")
                         .accessibilityValue(api.state.isMuted ? "Muted" : "Unmuted")
                         .keyboardShortcut("m", modifiers: .command)
-                        
+
                         Button {
                             playHaptic(.light)
                             Task {
@@ -275,19 +275,19 @@ struct ReceiverControlView: View {
             .glassEffect(.regular, in: .rect(cornerRadius: 16))
         }
     }
-    
+
     private var inputSelection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "tv.and.hifispeaker.fill")
                     .font(.title3)
                     .foregroundStyle(.purple)
-                
+
                 Text("Input Source")
                     .font(.headline)
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
                     ForEach(DenonAPI.availableInputs, id: \.code) { input in
@@ -306,7 +306,7 @@ struct ReceiverControlView: View {
                                 Image(systemName: iconForInput(input.code))
                                     .font(.title2)
                                     .foregroundStyle(api.state.currentInput == input.code ? .white : .primary)
-                                
+
                                 Text(input.name)
                                     .font(.caption)
                                     .foregroundStyle(api.state.currentInput == input.code ? .white : .primary)
@@ -331,21 +331,21 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Sleep Timer
-    
+
     private var sleepTimerSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "moon.zzz.fill")
                     .font(.title3)
                     .foregroundStyle(.indigo)
-                
+
                 Text("Sleep Timer")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 if let minutes = api.state.sleepTimer {
                     Text("\(minutes) min")
                         .font(.subheadline)
@@ -353,7 +353,7 @@ struct ReceiverControlView: View {
                 }
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 12) {
                     ForEach(DenonAPI.sleepTimerOptions, id: \.value) { option in
@@ -391,21 +391,21 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Tone Controls
-    
+
     private var toneControlSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "slider.horizontal.3")
                     .font(.title3)
                     .foregroundStyle(.cyan)
-                
+
                 Text("Tone Controls")
                     .font(.headline)
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 VStack(spacing: 20) {
                     // Bass
@@ -445,7 +445,7 @@ struct ReceiverControlView: View {
                         .accessibilityValue(toneLabel(api.state.bass))
                         .accessibilityHint("Adjusts bass from minus 6 to plus 6 decibels")
                     }
-                    
+
                     // Treble
                     VStack(spacing: 8) {
                         HStack {
@@ -489,21 +489,21 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Dynamic Settings
-    
+
     private var dynamicSettingsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "waveform.badge.magnifyingglass")
                     .font(.title3)
                     .foregroundStyle(.green)
-                
+
                 Text("Dynamic Audio")
                     .font(.headline)
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 VStack(spacing: 16) {
                     // Dynamic EQ Toggle
@@ -531,9 +531,9 @@ struct ReceiverControlView: View {
                         .accessibilityLabel("Dynamic EQ")
                         .accessibilityValue(api.state.dynamicEQ ? "On" : "Off")
                     }
-                    
+
                     Divider()
-                    
+
                     // Dynamic Volume
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -546,7 +546,7 @@ struct ReceiverControlView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        
+
                         HStack(spacing: 8) {
                             ForEach(DenonAPI.dynamicVolumeOptions, id: \.code) { option in
                                 Button {
@@ -585,21 +585,21 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Tuner Presets
-    
+
     private var tunerPresetsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "radio.fill")
                     .font(.title3)
                     .foregroundStyle(.yellow)
-                
+
                 Text("Tuner Presets")
                     .font(.headline)
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 HStack(spacing: 12) {
                     Button {
@@ -625,7 +625,7 @@ struct ReceiverControlView: View {
                     .buttonStyle(.glass)
                     .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
                     .accessibilityLabel("Previous tuner preset")
-                    
+
                     Button {
                         playHaptic(.light)
                         Task {
@@ -653,21 +653,21 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Scenes
-    
+
     private var scenesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "theatermasks.fill")
                     .font(.title3)
                     .foregroundStyle(.mint)
-                
+
                 Text("Scenes")
                     .font(.headline)
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 HStack(spacing: 12) {
                     Button {
@@ -686,7 +686,7 @@ struct ReceiverControlView: View {
                     .buttonStyle(.glass)
                     .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
                     .accessibilityLabel("Save current configuration as a scene")
-                    
+
                     Button {
                         playHaptic(.light)
                         showingScenes = true
@@ -707,21 +707,21 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Quick Actions
-    
+
     private var quickActions: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "bolt.fill")
                     .font(.title3)
                     .foregroundStyle(.orange)
-                
+
                 Text("Quick Actions")
                     .font(.headline)
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 HStack(spacing: 12) {
                     Button {
@@ -748,7 +748,7 @@ struct ReceiverControlView: View {
                     .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
                     .accessibilityLabel("Refresh receiver state")
                     .keyboardShortcut("r", modifiers: .command)
-                    
+
                     Button {
                         playHaptic(.light)
                         showingSettings = true
@@ -769,9 +769,9 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Zone Picker
-    
+
     private var zonePicker: some View {
         Picker("Zone", selection: $selectedZone) {
             Text("Main").tag(0)
@@ -781,9 +781,9 @@ struct ReceiverControlView: View {
         .pickerStyle(.segmented)
         .accessibilityLabel("Zone selector")
     }
-    
+
     // MARK: - Zone Control View (Zone 2/3)
-    
+
     private func zoneControlView(
         zone: Int,
         zoneState: ZoneState,
@@ -798,7 +798,7 @@ struct ReceiverControlView: View {
         VStack(spacing: 24) {
             // Zone Power
             zonePowerControl(zoneState: zoneState, setPower: setPower)
-            
+
             // Zone Volume
             zoneVolumeControl(
                 zone: zone,
@@ -808,10 +808,10 @@ struct ReceiverControlView: View {
                 volumeDown: volumeDown,
                 setMute: setMute
             )
-            
+
             // Zone Input
             zoneInputSelection(zone: zone, zoneState: zoneState, setInput: setInput)
-            
+
             // Zone Refresh
             GlassEffectContainer(spacing: 12.0) {
                 Button {
@@ -840,7 +840,7 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     private func zonePowerControl(zoneState: ZoneState, setPower: @escaping (Bool) async throws -> Void) -> some View {
         GlassEffectContainer(spacing: 20.0) {
             VStack(spacing: 16) {
@@ -848,12 +848,12 @@ struct ReceiverControlView: View {
                     Image(systemName: "power")
                         .font(.title2)
                         .foregroundStyle(zoneState.isPowerOn ? .green : .secondary)
-                    
+
                     Text(zoneState.isPowerOn ? "Powered On" : "Standby")
                         .font(.headline)
-                    
+
                     Spacer()
-                    
+
                     Toggle("", isOn: Binding(
                         get: { zoneState.isPowerOn },
                         set: { newValue in
@@ -877,7 +877,7 @@ struct ReceiverControlView: View {
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
         }
     }
-    
+
     private func zoneVolumeControl(
         zone: Int,
         zoneState: ZoneState,
@@ -892,17 +892,17 @@ struct ReceiverControlView: View {
                     Image(systemName: zoneState.isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
                         .font(.title2)
                         .foregroundStyle(zoneState.isMuted ? .red : .blue)
-                    
+
                     Text("Volume")
                         .font(.headline)
-                    
+
                     Spacer()
-                    
+
                     Text("\(zoneState.volume)")
                         .font(.title2.bold())
                         .foregroundStyle(.primary)
                 }
-                
+
                 VStack(spacing: 12) {
                     Slider(
                         value: Binding(
@@ -928,7 +928,7 @@ struct ReceiverControlView: View {
                     .accessibilityLabel("Zone \(zone) Volume")
                     .accessibilityValue("\(zoneState.volume) decibels")
                     .accessibilityHint("Adjusts volume from 0 to \(receiver.volumeLimit)")
-                    
+
                     HStack(spacing: 16) {
                         Button {
                             playHaptic(.light)
@@ -946,7 +946,7 @@ struct ReceiverControlView: View {
                         .buttonStyle(.glass)
                         .glassEffect(.regular.interactive(), in: .circle)
                         .accessibilityLabel("Zone \(zone) Volume Down")
-                        
+
                         Button {
                             playHaptic(.light)
                             Task {
@@ -963,7 +963,7 @@ struct ReceiverControlView: View {
                         .buttonStyle(.glassProminent)
                         .glassEffect(.regular.tint(zoneState.isMuted ? .red : .blue).interactive(), in: .rect(cornerRadius: 12))
                         .accessibilityLabel(zoneState.isMuted ? "Zone \(zone) Unmute" : "Zone \(zone) Mute")
-                        
+
                         Button {
                             playHaptic(.light)
                             Task {
@@ -987,19 +987,19 @@ struct ReceiverControlView: View {
             .glassEffect(.regular, in: .rect(cornerRadius: 16))
         }
     }
-    
+
     private func zoneInputSelection(zone: Int, zoneState: ZoneState, setInput: @escaping (String) async throws -> Void) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "tv.and.hifispeaker.fill")
                     .font(.title3)
                     .foregroundStyle(.purple)
-                
+
                 Text("Zone \(zone) Input")
                     .font(.headline)
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
                     ForEach(DenonAPI.availableInputs, id: \.code) { input in
@@ -1016,7 +1016,7 @@ struct ReceiverControlView: View {
                                 Image(systemName: iconForInput(input.code))
                                     .font(.title2)
                                     .foregroundStyle(zoneState.currentInput == input.code ? .white : .primary)
-                                
+
                                 Text(input.name)
                                     .font(.caption)
                                     .foregroundStyle(zoneState.currentInput == input.code ? .white : .primary)
@@ -1040,27 +1040,27 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Surround Mode
-    
+
     private var surroundModeSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "hifispeaker.and.appletv.fill")
                     .font(.title3)
                     .foregroundStyle(.teal)
-                
+
                 Text("Surround Mode")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 Text(api.state.surroundMode)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 12) {
                     ForEach(DenonAPI.availableSurroundModes, id: \.code) { mode in
@@ -1098,21 +1098,21 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     // MARK: - Now Playing
-    
+
     private var nowPlayingSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Image(systemName: "music.note")
                     .font(.title3)
                     .foregroundStyle(.pink)
-                
+
                 Text("Now Playing")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 Button {
                     Task {
                         do { try await api.refreshNowPlaying() } catch {
@@ -1128,7 +1128,7 @@ struct ReceiverControlView: View {
                 .accessibilityLabel("Refresh Now Playing")
             }
             .padding(.horizontal, 4)
-            
+
             GlassEffectContainer(spacing: 12.0) {
                 VStack(spacing: 16) {
                     if api.state.nowPlaying.isEmpty {
@@ -1159,7 +1159,7 @@ struct ReceiverControlView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    
+
                     // Transport Controls
                     HStack(spacing: 20) {
                         transportButton(systemImage: "backward.fill", label: "Previous") {
@@ -1184,7 +1184,7 @@ struct ReceiverControlView: View {
             }
         }
     }
-    
+
     private func transportButton(systemImage: String, label: String, action: @escaping () async throws -> Void) -> some View {
         Button {
             playHaptic(.light)
@@ -1203,9 +1203,9 @@ struct ReceiverControlView: View {
         .glassEffect(.regular.interactive(), in: .circle)
         .accessibilityLabel(label)
     }
-    
+
     // MARK: - Disconnected View
-    
+
     private var disconnectedView: some View {
         ContentUnavailableView {
             VStack(spacing: 8) {
@@ -1218,7 +1218,7 @@ struct ReceiverControlView: View {
         } description: {
             VStack(spacing: 16) {
                 Text("Connect to **\(receiver.name)** at \(receiver.ipAddress)")
-                
+
                 if api.isReconnecting {
                     VStack(spacing: 8) {
                         ProgressView()
@@ -1230,7 +1230,7 @@ struct ReceiverControlView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                
+
                 if let error = api.errorMessage {
                     Text(error)
                         .font(.caption)
@@ -1252,9 +1252,9 @@ struct ReceiverControlView: View {
             .disabled(isConnecting || api.isReconnecting)
         }
     }
-    
+
     // MARK: - Connection Button
-    
+
     private var connectionButton: some View {
         Button {
             playHaptic()
@@ -1271,13 +1271,13 @@ struct ReceiverControlView: View {
         }
         .disabled(isConnecting)
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func connectToReceiver() {
         isConnecting = true
         api.errorMessage = nil
-        
+
         Task {
             do {
                 try await api.connect(to: receiver)
@@ -1290,7 +1290,7 @@ struct ReceiverControlView: View {
             isConnecting = false
         }
     }
-    
+
     private func iconForInput(_ code: String) -> String {
         switch code {
         case "BD": return "opticaldiscdrive.fill"
@@ -1308,11 +1308,11 @@ struct ReceiverControlView: View {
         default: return "rectangle.fill"
         }
     }
-    
+
     private func playHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
         UIImpactFeedbackGenerator(style: style).impactOccurred()
     }
-    
+
     /// Converts raw tone value (44–56) to a dB label relative to center (50 = 0 dB).
     private func toneLabel(_ value: Int) -> String {
         let db = value - 50
