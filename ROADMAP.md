@@ -181,15 +181,15 @@ Save and recall receiver configurations.
 
 ---
 
-## Phase 12: Siri Shortcuts & App Intents
+## Phase 12: Siri Shortcuts & App Intents ✅
 
 Voice control and Shortcuts app integration.
 
-- [ ] App Intents: `PowerOnIntent`, `SetVolumeIntent`, `SetInputIntent`
-- [ ] Entity resolution — discover receivers from SwiftData for Siri
-- [ ] Shortcuts app integration — intents appear in Shortcuts
-- [ ] Siri phrases: "Turn on the living room receiver", "Set volume to 40"
-- [ ] App Shortcuts — Spotlight suggestions
+- [x] App Intents: `PowerOnIntent`, `SetVolumeIntent`, `SetInputIntent`, `ToggleMuteIntent`
+- [x] Entity resolution — `ReceiverEntity` + `InputSourceEntity` discover receivers from SwiftData
+- [x] Shortcuts app integration — intents appear in Shortcuts
+- [x] Siri phrases: "Turn on the living room receiver", "Set volume to 40"
+- [x] App Shortcuts — Spotlight suggestions via `RemoteAppShortcuts` provider
 
 ---
 
