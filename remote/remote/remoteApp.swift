@@ -13,6 +13,7 @@ struct remoteApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             DenonReceiver.self,
+            ReceiverScene.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

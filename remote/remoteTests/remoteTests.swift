@@ -6,6 +6,7 @@
 //
 
 import Testing
+import Foundation
 @testable import remote
 
 // MARK: - DenonReceiver Model Tests
@@ -465,5 +466,93 @@ struct TunerTests {
         
         api.state.currentInput = "BD"
         #expect(api.isTunerActive == false)
+    }
+}
+
+// MARK: - Scene Tests
+
+struct ReceiverSceneTests {
+
+    @Test func sceneInitializesWithCorrectDefaults() {
+        let receiverID = UUID()
+        let scene = ReceiverScene(
+            name: "Movie Night",
+            receiverID: receiverID,
+            inputCode: "BD",
+            volume: 45,
+            surroundMode: "DOLBY DIGITAL",
+            isMuted: false
+        )
+
+        #expect(scene.name == "Movie Night")
+        #expect(scene.receiverID == receiverID)
+        #expect(scene.inputCode == "BD")
+        #expect(scene.volume == 45)
+        #expect(scene.surroundMode == "DOLBY DIGITAL")
+        #expect(scene.isMuted == false)
+        #expect(scene.hasZone2 == false)
+        #expect(scene.hasZone3 == false)
+    }
+
+    @Test func sceneWithZone2() {
+        let scene = ReceiverScene(
+            name: "Party",
+            receiverID: UUID(),
+            inputCode: "NET",
+            volume: 55,
+            surroundMode: "STEREO",
+            isMuted: false,
+            zone2InputCode: "MPLAY",
+            zone2Volume: 40,
+            zone2IsMuted: false
+        )
+
+        #expect(scene.hasZone2 == true)
+        #expect(scene.hasZone3 == false)
+        #expect(scene.zone2InputCode == "MPLAY")
+        #expect(scene.zone2Volume == 40)
+        #expect(scene.zone2IsMuted == false)
+    }
+
+    @Test func sceneWithAllZones() {
+        let scene = ReceiverScene(
+            name: "Full House",
+            receiverID: UUID(),
+            inputCode: "SPOTIFY",
+            volume: 50,
+            surroundMode: "MCH STEREO",
+            isMuted: false,
+            zone2InputCode: "NET",
+            zone2Volume: 35,
+            zone2IsMuted: true,
+            zone3InputCode: "TUNER",
+            zone3Volume: 30,
+            zone3IsMuted: false
+        )
+
+        #expect(scene.hasZone2 == true)
+        #expect(scene.hasZone3 == true)
+        #expect(scene.zone3InputCode == "TUNER")
+        #expect(scene.zone3Volume == 30)
+    }
+
+    @Test func sceneUniqueIDs() {
+        let id = UUID()
+        let scene1 = ReceiverScene(name: "A", receiverID: id, inputCode: "BD", volume: 40, surroundMode: "AUTO", isMuted: false)
+        let scene2 = ReceiverScene(name: "B", receiverID: id, inputCode: "BD", volume: 40, surroundMode: "AUTO", isMuted: false)
+        #expect(scene1.id != scene2.id)
+    }
+
+    @Test func sceneMutedState() {
+        let scene = ReceiverScene(
+            name: "Silent",
+            receiverID: UUID(),
+            inputCode: "TV",
+            volume: 0,
+            surroundMode: "STEREO",
+            isMuted: true
+        )
+        #expect(scene.isMuted == true)
+        #expect(scene.volume == 0)
     }
 }

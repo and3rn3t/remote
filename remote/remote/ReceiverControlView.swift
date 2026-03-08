@@ -21,6 +21,8 @@ struct ReceiverControlView: View {
     @State private var volumeDebounceTask: Task<Void, Never>?
     
     @State private var toneDebounceTask: Task<Void, Never>?
+    @State private var showingScenes = false
+    @State private var showingSaveScene = false
     
     var body: some View {
         ScrollView {
@@ -45,6 +47,12 @@ struct ReceiverControlView: View {
         }
         .sheet(isPresented: $showingSettings) {
             ReceiverSettingsView(receiver: receiver, api: api)
+        }
+        .sheet(isPresented: $showingScenes) {
+            SceneListView(receiverID: receiver.id, api: api, receiver: receiver)
+        }
+        .sheet(isPresented: $showingSaveScene) {
+            SaveSceneView(receiverID: receiver.id, api: api, receiver: receiver)
         }
         .alert("Connection Error", isPresented: $showingError) {
             Button("Retry") {
@@ -85,6 +93,7 @@ struct ReceiverControlView: View {
                 toneControlSection
                 dynamicSettingsSection
                 sleepTimerSection
+                scenesSection
                 quickActions
             } else if selectedZone == 1 {
                 zoneControlView(
@@ -640,6 +649,60 @@ struct ReceiverControlView: View {
                     .buttonStyle(.glass)
                     .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
                     .accessibilityLabel("Next tuner preset")
+                }
+            }
+        }
+    }
+    
+    // MARK: - Scenes
+    
+    private var scenesSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "theatermasks.fill")
+                    .font(.title3)
+                    .foregroundStyle(.mint)
+                
+                Text("Scenes")
+                    .font(.headline)
+            }
+            .padding(.horizontal, 4)
+            
+            GlassEffectContainer(spacing: 12.0) {
+                HStack(spacing: 12) {
+                    Button {
+                        playHaptic(.light)
+                        showingSaveScene = true
+                    } label: {
+                        VStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.down.fill")
+                                .font(.title2)
+                            Text("Save Scene")
+                                .font(.caption)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                    }
+                    .buttonStyle(.glass)
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                    .accessibilityLabel("Save current configuration as a scene")
+                    
+                    Button {
+                        playHaptic(.light)
+                        showingScenes = true
+                    } label: {
+                        VStack(spacing: 8) {
+                            Image(systemName: "theatermasks.fill")
+                                .font(.title2)
+                            Text("All Scenes")
+                                .font(.caption)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                    }
+                    .buttonStyle(.glass)
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                    .accessibilityLabel("View and recall saved scenes")
                 }
             }
         }

@@ -169,15 +169,15 @@ Now Playing on Lock Screen and Dynamic Island.
 
 ---
 
-## Phase 11: Scenes & Presets
+## Phase 11: Scenes & Presets ✅
 
 Save and recall receiver configurations.
 
-- [ ] `ReceiverScene` SwiftData model — name, receiverID, snapshot (input, volume, surround, zones)
-- [ ] "Save Current Scene" button in Quick Actions
-- [ ] Scene list view — tap to recall, swipe to delete
-- [ ] Per-zone scene support — save/restore Zone 2/3 independently
-- [ ] Quick Scene buttons ("Movie Night", "Music", "Party")
+- [x] `ReceiverScene` SwiftData model — name, receiverID, snapshot (input, volume, surround, zones)
+- [x] "Save Current Scene" button in Quick Actions
+- [x] Scene list view — tap to recall, swipe to delete
+- [x] Per-zone scene support — save/restore Zone 2/3 independently
+- [x] Quick Scene buttons ("Movie Night", "Music", "Party")
 
 ---
 
