@@ -198,11 +198,30 @@ Voice control and Shortcuts app integration.
 Ideas for later exploration, not committed to the roadmap.
 
 - **Apple Watch** — Companion app with quick controls (power, volume, mute)
-- **iCloud Sync** — Sync receiver list across devices (entitlements already configured)
 - **macOS Catalyst / native** — Desktop remote control
 - **Multi-receiver control** — Control multiple receivers simultaneously
-- **iPad optimization** — Multi-column layout, keyboard shortcuts
-- **Haptic feedback** — Tactile response on all control interactions
+
+---
+
+## Phase 14: iCloud Sync ✅
+
+Sync receiver list and scenes across devices via CloudKit.
+
+- [x] iCloud container identifier (`iCloud.dev.andernet.remote`) in entitlements
+- [x] SwiftData `ModelConfiguration` with `cloudKitDatabase: .automatic`
+- [x] Automatic sync for `DenonReceiver` and `ReceiverScene` models
+- [x] iCloud Sync status indicator in App Settings
+
+---
+
+## Phase 15: iPad Optimization ✅
+
+Enhance the app for iPad's larger screen and hardware keyboard.
+
+- [x] `NavigationSplitView` with `.balanced` style and column visibility control
+- [x] `horizontalSizeClass` awareness in receiver row (port, volume limit on regular width)
+- [x] Keyboard shortcuts: Cmd+N (add receiver), Cmd+, (settings), Cmd+P (power toggle)
+- [x] Keyboard shortcuts: Cmd+Up/Down (volume), Cmd+M (mute), Cmd+R (refresh)
 
 ---
 

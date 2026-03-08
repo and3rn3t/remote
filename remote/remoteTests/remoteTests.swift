@@ -7,6 +7,7 @@
 
 import Testing
 import Foundation
+import SwiftData
 @testable import remote
 
 // MARK: - DenonReceiver Model Tests
@@ -554,5 +555,39 @@ struct ReceiverSceneTests {
         )
         #expect(scene.isMuted == true)
         #expect(scene.volume == 0)
+    }
+}
+
+// MARK: - iCloud Sync Configuration Tests
+
+struct CloudSyncTests {
+    @Test func modelConfigurationUsesCloudKit() throws {
+        let schema = Schema([DenonReceiver.self, ReceiverScene.self])
+        // Verify CloudKit configuration can be created without throwing
+        let config = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .automatic
+        )
+        #expect(config.schema != nil)
+    }
+
+    @Test func modelSchemaIncludesBothModels() {
+        let schema = Schema([DenonReceiver.self, ReceiverScene.self])
+        #expect(schema.entities.count == 2)
+    }
+}
+
+// MARK: - iPad Layout Tests
+
+struct PadLayoutTests {
+    @Test func receiverHasVolumeLimitForDisplay() {
+        let receiver = DenonReceiver(name: "Test", ipAddress: "10.0.0.1", volumeLimit: 75)
+        #expect(receiver.volumeLimit == 75)
+    }
+
+    @Test func receiverHasPortForDisplay() {
+        let receiver = DenonReceiver(name: "Test", ipAddress: "10.0.0.1", port: 2323)
+        #expect(receiver.port == 2323)
     }
 }

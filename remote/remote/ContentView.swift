@@ -10,6 +10,7 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Query(sort: \DenonReceiver.lastConnected, order: .reverse) private var receivers: [DenonReceiver]
 
     @State private var showingAddReceiver = false
@@ -17,6 +18,7 @@ struct ContentView: View {
     @State private var selectedReceiver: DenonReceiver?
     @State private var showFavoritesOnly = false
     @State private var searchText = ""
+    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
 
     private var filteredReceivers: [DenonReceiver] {
         var result = receivers
@@ -33,7 +35,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             receiversList
         } detail: {
             if let receiver = selectedReceiver {
@@ -42,6 +44,7 @@ struct ContentView: View {
                 emptyDetailView
             }
         }
+        .navigationSplitViewStyle(.balanced)
     }
 
     // MARK: - Receivers List
@@ -103,6 +106,15 @@ struct ContentView: View {
         .onAppear {
             autoConnectIfNeeded()
         }
+        .background {
+            // iPad keyboard shortcuts
+            Button("") { showingAddReceiver = true }
+                .keyboardShortcut("n", modifiers: .command)
+                .hidden()
+            Button("") { showingAppSettings = true }
+                .keyboardShortcut(",", modifiers: .command)
+                .hidden()
+        }
     }
 
     private var emptyDetailView: some View {
@@ -144,6 +156,7 @@ struct ContentView: View {
 // MARK: - Receiver Row View
 
 struct ReceiverRowView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let receiver: DenonReceiver
 
     var body: some View {
@@ -156,15 +169,30 @@ struct ReceiverRowView: View {
                 Text(receiver.name)
                     .font(.headline)
 
-                Text(receiver.ipAddress)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Text(receiver.ipAddress)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    if horizontalSizeClass == .regular {
+                        Text("Port \(receiver.port)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 if let lastConnected = receiver.lastConnected {
                     Text("Last connected \(lastConnected, format: .relative(presentation: .named))")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
+            }
+
+            if horizontalSizeClass == .regular {
+                Spacer()
+                Text("Vol limit: \(receiver.volumeLimit)")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
         }
     }

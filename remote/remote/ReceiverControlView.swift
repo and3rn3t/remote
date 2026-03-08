@@ -64,6 +64,15 @@ struct ReceiverControlView: View {
                 Text(error)
             }
         }
+        .background {
+            Button("") {
+                Task {
+                    try? await api.setPower(!api.state.isPowerOn)
+                }
+            }
+            .keyboardShortcut("p", modifiers: .command)
+            .hidden()
+        }
     }
 
     // MARK: - Connected View
@@ -228,6 +237,7 @@ struct ReceiverControlView: View {
                         .buttonStyle(.glass)
                         .glassEffect(.regular.interactive(), in: .circle)
                         .accessibilityLabel("Volume Down")
+                        .keyboardShortcut(.downArrow, modifiers: .command)
 
                         Button {
                             playHaptic(.light)
@@ -268,6 +278,7 @@ struct ReceiverControlView: View {
                         .buttonStyle(.glass)
                         .glassEffect(.regular.interactive(), in: .circle)
                         .accessibilityLabel("Volume Up")
+                        .keyboardShortcut(.upArrow, modifiers: .command)
                     }
                 }
             }

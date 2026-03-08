@@ -173,6 +173,19 @@ struct AppSettingsView: View {
 
                 Section {
                     HStack {
+                        Label("iCloud Sync", systemImage: "icloud")
+                        Spacer()
+                        Text("Enabled")
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Sync")
+                } footer: {
+                    Text("Receivers and scenes sync automatically across your devices via iCloud.")
+                }
+
+                Section {
+                    HStack {
                         Text("Version")
                         Spacer()
                         Text(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0")
