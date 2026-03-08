@@ -15,6 +15,25 @@ struct remoteApp: App {
             DenonReceiver.self,
             ReceiverScene.self,
         ])
+
+        // When running as test host, use a minimal in-memory container to avoid
+        // CloudKit entitlement issues that crash the test bootstrap.
+        let isTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil
+            || NSClassFromString("XCTestCase") != nil
+        if isTesting {
+            // swiftlint:disable:next force_try
+            return try! ModelContainer(
+                for: schema,
+                configurations: ModelConfiguration(
+                    "testing",
+                    schema: schema,
+                    isStoredInMemoryOnly: true,
+                    cloudKitDatabase: .none
+                )
+            )
+        }
+
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
@@ -26,6 +45,7 @@ struct remoteApp: App {
         } catch {
             // Fall back to in-memory store so the app remains usable
             let fallback = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            // swiftlint:disable:next force_try
             return try! ModelContainer(for: schema, configurations: [fallback])
         }
     }()
