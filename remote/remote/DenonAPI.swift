@@ -8,6 +8,7 @@
 import Foundation
 import Observation
 import WidgetKit
+import ActivityKit
 
 /// State for a single zone (Main, Zone 2, or Zone 3)
 struct ZoneState {
@@ -77,6 +78,7 @@ final class DenonAPI {
     private var reconnectAttempts = 0
     private static let maxReconnectAttempts = 5
     private let logger = ConnectionLogger.shared
+    private let liveActivity = LiveActivityManager.shared
     
     /// Timeout for establishing a TCP connection, in seconds.
     var connectionTimeout: TimeInterval = 5.0
@@ -154,6 +156,7 @@ final class DenonAPI {
         cleanupStreams()
         isConnected = false
         reconnectAttempts = 0
+        liveActivity.end()
     }
     
     private func cleanupStreams() {
@@ -279,6 +282,7 @@ final class DenonAPI {
             }
         }
         updateWidgetStatus()
+        updateLiveActivity()
     }
     
     private func updateWidgetStatus() {
@@ -293,6 +297,25 @@ final class DenonAPI {
             lastUpdated: .now
         ).save()
         WidgetCenter.shared.reloadTimelines(ofKind: "ReceiverStatusWidget")
+    }
+    
+    private func updateLiveActivity() {
+        guard let receiver, isConnected, isNetworkSource else {
+            // End activity if not connected or not on a network source
+            if liveActivity.isActive && (!isConnected || !isNetworkSource) {
+                liveActivity.end()
+            }
+            return
+        }
+        liveActivity.update(
+            receiverName: receiver.name,
+            inputSource: state.currentInput,
+            trackName: state.nowPlaying.line3,
+            artistName: state.nowPlaying.line1,
+            albumName: state.nowPlaying.line2,
+            isPlaying: state.isPowerOn && !state.nowPlaying.isEmpty,
+            volume: state.volume
+        )
     }
     
     private func parseResponse(_ response: String) {
@@ -488,6 +511,11 @@ final class DenonAPI {
     func setInput(_ input: String) async throws {
         try await sendCommand("SI\(input)")
         state.currentInput = input
+        // End Live Activity when switching away from network sources
+        let networkInputs = ["NET", "SPOTIFY", "BT", "USB/IPOD", "MPLAY"]
+        if !networkInputs.contains(input) {
+            liveActivity.end()
+        }
     }
     
     // MARK: - Surround Mode

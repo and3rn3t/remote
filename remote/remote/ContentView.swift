@@ -16,12 +16,20 @@ struct ContentView: View {
     @State private var showingAppSettings = false
     @State private var selectedReceiver: DenonReceiver?
     @State private var showFavoritesOnly = false
+    @State private var searchText = ""
 
     private var filteredReceivers: [DenonReceiver] {
+        var result = receivers
         if showFavoritesOnly {
-            return receivers.filter(\.isFavorite)
+            result = result.filter(\.isFavorite)
         }
-        return receivers
+        if !searchText.isEmpty {
+            result = result.filter {
+                $0.name.localizedCaseInsensitiveContains(searchText) ||
+                $0.ipAddress.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        return result
     }
 
     var body: some View {
@@ -85,6 +93,7 @@ struct ContentView: View {
                 EditButton()
             }
         }
+        .searchable(text: $searchText, prompt: "Search receivers")
         .sheet(isPresented: $showingAddReceiver) {
             AddReceiverView()
         }

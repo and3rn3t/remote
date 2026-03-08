@@ -9,6 +9,8 @@
 		<string>_http._tcp</string>
 		<string>_denon._tcp</string>
 	</array>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

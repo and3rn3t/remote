@@ -98,6 +98,8 @@ struct LogViewerView: View {
                         .foregroundStyle(.tertiary)
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(entry.category.rawValue): \(entry.message)")
         }
         .listStyle(.plain)
     }

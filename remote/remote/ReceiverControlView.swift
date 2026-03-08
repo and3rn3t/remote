@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct ReceiverControlView: View {
     @Environment(\.modelContext) private var modelContext
@@ -111,6 +112,7 @@ struct ReceiverControlView: View {
                 )
             }
         }
+        .animation(.smooth, value: selectedZone)
     }
     
     private var powerControl: some View {
@@ -129,6 +131,7 @@ struct ReceiverControlView: View {
                     Toggle("", isOn: Binding(
                         get: { api.state.isPowerOn },
                         set: { newValue in
+                            playHaptic()
                             Task {
                                 do {
                                     try await api.setPower(newValue)
@@ -191,13 +194,15 @@ struct ReceiverControlView: View {
                         ),
                         in: 0...Double(receiver.volumeLimit)
                     )
-                    .tint(.blue)
+                    .tint(Double(api.state.volume) > Double(receiver.volumeLimit) * 0.9 ? .red : .blue)
                     .accessibilityLabel("Volume")
                     .accessibilityValue("\(api.state.volume) decibels")
+                    .accessibilityHint("Adjusts volume from 0 to \(receiver.volumeLimit)")
                     
                     // Volume buttons
                     HStack(spacing: 16) {
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do {
                                     try await api.volumeDown()
@@ -216,6 +221,7 @@ struct ReceiverControlView: View {
                         .accessibilityLabel("Volume Down")
                         
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do {
                                     try await api.setMute(!api.state.isMuted)
@@ -233,8 +239,10 @@ struct ReceiverControlView: View {
                         .glassEffect(.regular.tint(api.state.isMuted ? .red : .blue).interactive(), in: .rect(cornerRadius: 12))
                         .accessibilityLabel(api.state.isMuted ? "Unmute" : "Mute")
                         .accessibilityValue(api.state.isMuted ? "Muted" : "Unmuted")
+                        .keyboardShortcut("m", modifiers: .command)
                         
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do {
                                     try await api.volumeUp()
@@ -275,6 +283,7 @@ struct ReceiverControlView: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
                     ForEach(DenonAPI.availableInputs, id: \.code) { input in
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do {
                                     try await api.setInput(input.code)
@@ -342,6 +351,7 @@ struct ReceiverControlView: View {
                         let isActive = (option.value == "OFF" && api.state.sleepTimer == nil) ||
                             (Int(option.value) == api.state.sleepTimer)
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do {
                                     try await api.setSleepTimer(option.value)
@@ -424,6 +434,7 @@ struct ReceiverControlView: View {
                         .tint(.cyan)
                         .accessibilityLabel("Bass")
                         .accessibilityValue(toneLabel(api.state.bass))
+                        .accessibilityHint("Adjusts bass from minus 6 to plus 6 decibels")
                     }
                     
                     // Treble
@@ -461,6 +472,7 @@ struct ReceiverControlView: View {
                         .tint(.cyan)
                         .accessibilityLabel("Treble")
                         .accessibilityValue(toneLabel(api.state.treble))
+                        .accessibilityHint("Adjusts treble from minus 6 to plus 6 decibels")
                     }
                 }
                 .padding(20)
@@ -495,6 +507,7 @@ struct ReceiverControlView: View {
                         Toggle("", isOn: Binding(
                             get: { api.state.dynamicEQ },
                             set: { newValue in
+                                playHaptic(.light)
                                 Task {
                                     do {
                                         try await api.setDynamicEQ(newValue)
@@ -528,6 +541,7 @@ struct ReceiverControlView: View {
                         HStack(spacing: 8) {
                             ForEach(DenonAPI.dynamicVolumeOptions, id: \.code) { option in
                                 Button {
+                                    playHaptic(.light)
                                     Task {
                                         do {
                                             try await api.setDynamicVolume(option.code)
@@ -580,6 +594,7 @@ struct ReceiverControlView: View {
             GlassEffectContainer(spacing: 12.0) {
                 HStack(spacing: 12) {
                     Button {
+                        playHaptic(.light)
                         Task {
                             do {
                                 try await api.tunerPresetDown()
@@ -603,6 +618,7 @@ struct ReceiverControlView: View {
                     .accessibilityLabel("Previous tuner preset")
                     
                     Button {
+                        playHaptic(.light)
                         Task {
                             do {
                                 try await api.tunerPresetUp()
@@ -646,6 +662,7 @@ struct ReceiverControlView: View {
             GlassEffectContainer(spacing: 12.0) {
                 HStack(spacing: 12) {
                     Button {
+                        playHaptic(.light)
                         Task {
                             do {
                                 try await api.refreshState()
@@ -667,8 +684,10 @@ struct ReceiverControlView: View {
                     .buttonStyle(.glass)
                     .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
                     .accessibilityLabel("Refresh receiver state")
+                    .keyboardShortcut("r", modifiers: .command)
                     
                     Button {
+                        playHaptic(.light)
                         showingSettings = true
                     } label: {
                         VStack(spacing: 8) {
@@ -733,6 +752,7 @@ struct ReceiverControlView: View {
             // Zone Refresh
             GlassEffectContainer(spacing: 12.0) {
                 Button {
+                    playHaptic(.light)
                     Task {
                         do {
                             try await refreshState()
@@ -774,6 +794,7 @@ struct ReceiverControlView: View {
                     Toggle("", isOn: Binding(
                         get: { zoneState.isPowerOn },
                         set: { newValue in
+                            playHaptic()
                             Task {
                                 do {
                                     try await setPower(newValue)
@@ -840,12 +861,14 @@ struct ReceiverControlView: View {
                         ),
                         in: 0...Double(receiver.volumeLimit)
                     )
-                    .tint(.blue)
+                    .tint(Double(zoneState.volume) > Double(receiver.volumeLimit) * 0.9 ? .red : .blue)
                     .accessibilityLabel("Zone \(zone) Volume")
                     .accessibilityValue("\(zoneState.volume) decibels")
+                    .accessibilityHint("Adjusts volume from 0 to \(receiver.volumeLimit)")
                     
                     HStack(spacing: 16) {
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do { try await volumeDown() } catch {
                                     api.errorMessage = error.localizedDescription
@@ -862,6 +885,7 @@ struct ReceiverControlView: View {
                         .accessibilityLabel("Zone \(zone) Volume Down")
                         
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do { try await setMute(!zoneState.isMuted) } catch {
                                     api.errorMessage = error.localizedDescription
@@ -878,6 +902,7 @@ struct ReceiverControlView: View {
                         .accessibilityLabel(zoneState.isMuted ? "Zone \(zone) Unmute" : "Zone \(zone) Mute")
                         
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do { try await volumeUp() } catch {
                                     api.errorMessage = error.localizedDescription
@@ -916,6 +941,7 @@ struct ReceiverControlView: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
                     ForEach(DenonAPI.availableInputs, id: \.code) { input in
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do { try await setInput(input.code) } catch {
                                     api.errorMessage = error.localizedDescription
@@ -976,6 +1002,7 @@ struct ReceiverControlView: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 12) {
                     ForEach(DenonAPI.availableSurroundModes, id: \.code) { mode in
                         Button {
+                            playHaptic(.light)
                             Task {
                                 do {
                                     try await api.setSurroundMode(mode.code)
@@ -1097,6 +1124,7 @@ struct ReceiverControlView: View {
     
     private func transportButton(systemImage: String, label: String, action: @escaping () async throws -> Void) -> some View {
         Button {
+            playHaptic(.light)
             Task {
                 do { try await action() } catch {
                     api.errorMessage = error.localizedDescription
@@ -1106,7 +1134,7 @@ struct ReceiverControlView: View {
         } label: {
             Image(systemName: systemImage)
                 .font(.title2)
-                .frame(width: 44, height: 44)
+                .frame(width: 48, height: 48)
         }
         .buttonStyle(.glass)
         .glassEffect(.regular.interactive(), in: .circle)
@@ -1117,10 +1145,13 @@ struct ReceiverControlView: View {
     
     private var disconnectedView: some View {
         ContentUnavailableView {
-            Label(
-                api.isReconnecting ? "Reconnecting…" : "Not Connected",
-                systemImage: api.isReconnecting ? "arrow.triangle.2.circlepath" : "antenna.radiowaves.left.and.right.slash"
-            )
+            VStack(spacing: 8) {
+                Image(systemName: api.isReconnecting ? "arrow.triangle.2.circlepath" : "antenna.radiowaves.left.and.right.slash")
+                    .font(.system(size: 36))
+                    .symbolEffect(.pulse, isActive: api.isReconnecting)
+                Text(api.isReconnecting ? "Reconnecting…" : "Not Connected")
+                    .font(.headline)
+            }
         } description: {
             VStack(spacing: 16) {
                 Text("Connect to **\(receiver.name)** at \(receiver.ipAddress)")
@@ -1131,6 +1162,9 @@ struct ReceiverControlView: View {
                         Text("Attempt \(api.currentReconnectAttempt) of 5")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        Text("Retrying in ~\(Int(pow(2.0, Double(api.currentReconnectAttempt - 1))))s…")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
                 }
                 
@@ -1142,6 +1176,7 @@ struct ReceiverControlView: View {
             }
         } actions: {
             Button {
+                playHaptic()
                 connectToReceiver()
             } label: {
                 if isConnecting {
@@ -1159,6 +1194,7 @@ struct ReceiverControlView: View {
     
     private var connectionButton: some View {
         Button {
+            playHaptic()
             if api.isConnected {
                 api.disconnect()
             } else {
@@ -1208,6 +1244,10 @@ struct ReceiverControlView: View {
         case "SPOTIFY": return "music.note"
         default: return "rectangle.fill"
         }
+    }
+    
+    private func playHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
+        UIImpactFeedbackGenerator(style: style).impactOccurred()
     }
     
     /// Converts raw tone value (44–56) to a dB label relative to center (50 = 0 dB).

@@ -10,5 +10,6 @@ import SwiftUI
 struct remoteWidgetsBundle: WidgetBundle {
     var body: some Widget {
         ReceiverStatusWidget()
+        NowPlayingLiveActivity()
     }
 }

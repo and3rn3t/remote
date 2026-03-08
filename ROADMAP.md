@@ -156,16 +156,16 @@ Home Screen widgets for at-a-glance status and quick controls.
 
 ---
 
-## Phase 10: Live Activities (ActivityKit)
+## Phase 10: Live Activities (ActivityKit) ✅
 
 Now Playing on Lock Screen and Dynamic Island.
 
-- [ ] `NowPlayingActivity` — `ActivityAttributes` for track, artist, album, input
-- [ ] Start Live Activity when connected + playing on a network source
-- [ ] Lock Screen: track name, artist, transport controls (play/pause/skip)
-- [ ] Dynamic Island: compact = input icon + track; expanded = full transport
-- [ ] End activity on disconnect or input change away from network source
-- [ ] `NSSupportsLiveActivities = YES` in Info.plist
+- [x] `NowPlayingActivity` — `ActivityAttributes` for track, artist, album, input
+- [x] Start Live Activity when connected + playing on a network source
+- [x] Lock Screen: track name, artist, transport controls (play/pause/skip)
+- [x] Dynamic Island: compact = input icon + track; expanded = full transport
+- [x] End activity on disconnect or input change away from network source
+- [x] `NSSupportsLiveActivities = YES` in Info.plist
 
 ---
 
