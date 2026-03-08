@@ -4,7 +4,9 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
 
 /// Reusable control view for Zone 2 or Zone 3.
 struct ZoneControlView: View {
@@ -271,7 +273,11 @@ struct ZoneControlView: View {
         }
     }
 
+    #if canImport(UIKit)
     private func playHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
         UIImpactFeedbackGenerator(style: style).impactOccurred()
     }
+    #else
+    private func playHaptic(_ style: Any? = nil) {}
+    #endif
 }

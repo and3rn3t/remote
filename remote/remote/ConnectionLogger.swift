@@ -25,7 +25,7 @@ struct LogEntry: Identifiable {
 }
 
 /// Centralized, in-memory log store visible to the entire app.
-@Observable
+@MainActor @Observable
 final class ConnectionLogger {
     static let shared = ConnectionLogger()
 
@@ -38,6 +38,7 @@ final class ConnectionLogger {
         let entry = LogEntry(timestamp: Date(), category: category, message: message)
         entries.append(entry)
         if entries.count > maxEntries {
+            // Drop the oldest half to amortize removal cost to O(1) average
             entries.removeFirst(entries.count - maxEntries)
         }
     }

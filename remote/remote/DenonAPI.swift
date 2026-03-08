@@ -62,7 +62,7 @@ struct DenonState {
 }
 
 /// Manages communication with Denon AVR via the network API
-@Observable
+@MainActor @Observable
 final class DenonAPI {
     var state = DenonState()
     var isConnected = false
@@ -78,6 +78,8 @@ final class DenonAPI {
     private var reconnectAttempts = 0
     private let logger = ConnectionLogger.shared
     private let liveActivity = LiveActivityManager.shared
+    private var updateCoalesceTask: Task<Void, Never>?
+    private var lastCommandTime: ContinuousClock.Instant?
 
     /// Timeout for establishing a TCP connection, in seconds.
     var connectionTimeout: TimeInterval = DenonConstants.connectionTimeout
@@ -87,8 +89,24 @@ final class DenonAPI {
     func connect(to receiver: DenonReceiver) async throws {
         self.receiver = receiver
         reconnectAttempts = 0
+
+        // Restore cached state for instant UI while connecting
+        restoreCachedState()
+
         logger.log("Connecting to \(receiver.name) at \(receiver.ipAddress):\(receiver.port)", category: .connection)
         try await establishConnection(to: receiver)
+    }
+
+    /// Loads the last-known receiver state from the shared App Group cache.
+    private func restoreCachedState() {
+        guard let cached = ReceiverStatus.load(),
+              let receiver,
+              cached.ipAddress == receiver.ipAddress else { return }
+
+        state.isPowerOn = cached.isPowerOn
+        state.volume = cached.volume
+        state.currentInput = cached.currentInput
+        logger.log("Restored cached state (last updated \(cached.lastUpdated))", category: .info)
     }
 
     private func establishConnection(to receiver: DenonReceiver) async throws {
@@ -203,9 +221,10 @@ final class DenonAPI {
         isReconnecting = true
         logger.log("Reconnect attempt \(reconnectAttempts)/\(DenonConstants.maxReconnectAttempts)", category: .connection)
 
-        // Exponential backoff: 1s, 2s, 4s, 8s, 16s
-        let delay = pow(2.0, Double(reconnectAttempts - 1))
-        try? await Task.sleep(for: .seconds(delay))
+        // Exponential backoff with jitter: ~1s, ~2s, ~4s, ~8s, ~16s
+        let baseDelay = pow(2.0, Double(reconnectAttempts - 1))
+        let jitter = Double.random(in: 0..<(baseDelay * 0.25))
+        try? await Task.sleep(for: .seconds(baseDelay + jitter))
 
         guard !Task.isCancelled else {
             isReconnecting = false
@@ -235,6 +254,15 @@ final class DenonAPI {
             throw DenonError.notConnected
         }
 
+        // Throttle: ensure minimum interval between commands
+        if let last = lastCommandTime {
+            let elapsed = ContinuousClock.now - last
+            let minInterval = Duration.milliseconds(50)
+            if elapsed < minInterval {
+                try await Task.sleep(for: minInterval - elapsed)
+            }
+        }
+
         let commandString = "\(command)\r"
         let data = Array(commandString.utf8)
 
@@ -244,6 +272,8 @@ final class DenonAPI {
         if bytesWritten < 0 {
             throw DenonError.commandFailed
         }
+
+        lastCommandTime = .now
 
         // Brief delay to allow receiver to process
         try await Task.sleep(for: .milliseconds(100))
@@ -280,8 +310,18 @@ final class DenonAPI {
                 }
             }
         }
-        updateWidgetStatus()
-        updateLiveActivity()
+        scheduleCoalescedUpdate()
+    }
+
+    /// Batches widget and live activity updates so rapid responses don't trigger excessive reloads.
+    private func scheduleCoalescedUpdate() {
+        updateCoalesceTask?.cancel()
+        updateCoalesceTask = Task {
+            try? await Task.sleep(for: .milliseconds(200))
+            guard !Task.isCancelled else { return }
+            updateWidgetStatus()
+            updateLiveActivity()
+        }
     }
 
     private func updateWidgetStatus() {
@@ -336,11 +376,11 @@ final class DenonAPI {
 
             // Zone 3 (check before Zone 2 since Z3 is a longer prefix)
             if trimmed.hasPrefix("Z3") {
-                parseZone3Response(trimmed)
+                parseZoneResponse(trimmed, prefix: "Z3", zone: \.zone3)
             }
             // Zone 2
             else if trimmed.hasPrefix("Z2") {
-                parseZone2Response(trimmed)
+                parseZoneResponse(trimmed, prefix: "Z2", zone: \.zone2)
             }
             // Now Playing (NSE lines)
             else if trimmed.hasPrefix("NSE") {
@@ -380,42 +420,22 @@ final class DenonAPI {
         }
     }
 
-    private func parseZone2Response(_ line: String) {
-        if line == "Z2ON" {
-            state.zone2.isPowerOn = true
-        } else if line == "Z2OFF" {
-            state.zone2.isPowerOn = false
-        } else if line.hasPrefix("Z2MUON") {
-            state.zone2.isMuted = true
-        } else if line.hasPrefix("Z2MUOFF") {
-            state.zone2.isMuted = false
-        } else if line.count >= 4 {
-            // Check if it's a volume response (Z2XX where XX is digits)
-            let afterPrefix = String(line.dropFirst(2))
+    /// Generic parser for zone responses (Z2/Z3).
+    private func parseZoneResponse(_ line: String, prefix: String, zone: WritableKeyPath<DenonState, ZoneState>) {
+        if line == "\(prefix)ON" {
+            state[keyPath: zone].isPowerOn = true
+        } else if line == "\(prefix)OFF" {
+            state[keyPath: zone].isPowerOn = false
+        } else if line.hasPrefix("\(prefix)MUON") {
+            state[keyPath: zone].isMuted = true
+        } else if line.hasPrefix("\(prefix)MUOFF") {
+            state[keyPath: zone].isMuted = false
+        } else if line.count >= prefix.count + 2 {
+            let afterPrefix = String(line.dropFirst(prefix.count))
             if let volume = Int(afterPrefix), afterPrefix.allSatisfy(\.isNumber) {
-                state.zone2.volume = volume
+                state[keyPath: zone].volume = min(max(volume, 0), DenonConstants.maxVolume)
             } else if !afterPrefix.hasPrefix("MU") {
-                // It's an input source response
-                state.zone2.currentInput = afterPrefix
-            }
-        }
-    }
-
-    private func parseZone3Response(_ line: String) {
-        if line == "Z3ON" {
-            state.zone3.isPowerOn = true
-        } else if line == "Z3OFF" {
-            state.zone3.isPowerOn = false
-        } else if line.hasPrefix("Z3MUON") {
-            state.zone3.isMuted = true
-        } else if line.hasPrefix("Z3MUOFF") {
-            state.zone3.isMuted = false
-        } else if line.count >= 4 {
-            let afterPrefix = String(line.dropFirst(2))
-            if let volume = Int(afterPrefix), afterPrefix.allSatisfy(\.isNumber) {
-                state.zone3.volume = volume
-            } else if !afterPrefix.hasPrefix("MU") {
-                state.zone3.currentInput = afterPrefix
+                state[keyPath: zone].currentInput = afterPrefix
             }
         }
     }
@@ -528,98 +548,103 @@ final class DenonAPI {
         readResponses()
     }
 
+    // MARK: - Generic Zone Controls
+
+    private func setZonePower(_ on: Bool, prefix: String, zone: WritableKeyPath<DenonState, ZoneState>) async throws {
+        try await sendCommand(on ? "\(prefix)ON" : "\(prefix)OFF")
+        state[keyPath: zone].isPowerOn = on
+    }
+
+    private func setZoneVolume(_ volume: Int, prefix: String, zone: WritableKeyPath<DenonState, ZoneState>) async throws {
+        let clamped = min(max(volume, 0), DenonConstants.maxVolume)
+        let volumeString = String(format: "%02d", clamped)
+        try await sendCommand("\(prefix)\(volumeString)")
+        state[keyPath: zone].volume = clamped
+    }
+
+    private func zoneVolumeStep(_ direction: String, prefix: String, query: String) async throws {
+        try await sendCommand("\(prefix)\(direction)")
+        try await Task.sleep(for: .milliseconds(200))
+        try await sendCommand(query)
+        try await Task.sleep(for: .milliseconds(100))
+        readResponses()
+    }
+
+    private func setZoneMute(_ muted: Bool, prefix: String, zone: WritableKeyPath<DenonState, ZoneState>) async throws {
+        try await sendCommand(muted ? "\(prefix)MUON" : "\(prefix)MUOFF")
+        state[keyPath: zone].isMuted = muted
+    }
+
+    private func setZoneInput(_ input: String, prefix: String, zone: WritableKeyPath<DenonState, ZoneState>) async throws {
+        try await sendCommand("\(prefix)\(input)")
+        state[keyPath: zone].currentInput = input
+    }
+
+    private func refreshZoneState(prefix: String) async throws {
+        try await sendCommand("\(prefix)?")
+        try await sendCommand("\(prefix)MU?")
+        try await Task.sleep(for: .milliseconds(500))
+        readResponses()
+    }
+
     // MARK: - Zone 2 Controls
 
     func setZone2Power(_ on: Bool) async throws {
-        try await sendCommand(on ? "Z2ON" : "Z2OFF")
-        state.zone2.isPowerOn = on
+        try await setZonePower(on, prefix: "Z2", zone: \.zone2)
     }
 
     func setZone2Volume(_ volume: Int) async throws {
-        let clamped = min(max(volume, 0), 98)
-        let volumeString = String(format: "%02d", clamped)
-        try await sendCommand("Z2\(volumeString)")
-        state.zone2.volume = clamped
+        try await setZoneVolume(volume, prefix: "Z2", zone: \.zone2)
     }
 
     func zone2VolumeUp() async throws {
-        try await sendCommand("Z2UP")
-        try await Task.sleep(for: .milliseconds(200))
-        try await sendCommand("Z2?")
-        try await Task.sleep(for: .milliseconds(100))
-        readResponses()
+        try await zoneVolumeStep("UP", prefix: "Z2", query: "Z2?")
     }
 
     func zone2VolumeDown() async throws {
-        try await sendCommand("Z2DOWN")
-        try await Task.sleep(for: .milliseconds(200))
-        try await sendCommand("Z2?")
-        try await Task.sleep(for: .milliseconds(100))
-        readResponses()
+        try await zoneVolumeStep("DOWN", prefix: "Z2", query: "Z2?")
     }
 
     func setZone2Mute(_ muted: Bool) async throws {
-        try await sendCommand(muted ? "Z2MUON" : "Z2MUOFF")
-        state.zone2.isMuted = muted
+        try await setZoneMute(muted, prefix: "Z2", zone: \.zone2)
     }
 
     func setZone2Input(_ input: String) async throws {
-        try await sendCommand("Z2\(input)")
-        state.zone2.currentInput = input
+        try await setZoneInput(input, prefix: "Z2", zone: \.zone2)
     }
 
     func refreshZone2State() async throws {
-        try await sendCommand("Z2?")
-        try await sendCommand("Z2MU?")
-        try await Task.sleep(for: .milliseconds(500))
-        readResponses()
+        try await refreshZoneState(prefix: "Z2")
     }
 
     // MARK: - Zone 3 Controls
 
     func setZone3Power(_ on: Bool) async throws {
-        try await sendCommand(on ? "Z3ON" : "Z3OFF")
-        state.zone3.isPowerOn = on
+        try await setZonePower(on, prefix: "Z3", zone: \.zone3)
     }
 
     func setZone3Volume(_ volume: Int) async throws {
-        let clamped = min(max(volume, 0), 98)
-        let volumeString = String(format: "%02d", clamped)
-        try await sendCommand("Z3\(volumeString)")
-        state.zone3.volume = clamped
+        try await setZoneVolume(volume, prefix: "Z3", zone: \.zone3)
     }
 
     func zone3VolumeUp() async throws {
-        try await sendCommand("Z3UP")
-        try await Task.sleep(for: .milliseconds(200))
-        try await sendCommand("Z3?")
-        try await Task.sleep(for: .milliseconds(100))
-        readResponses()
+        try await zoneVolumeStep("UP", prefix: "Z3", query: "Z3?")
     }
 
     func zone3VolumeDown() async throws {
-        try await sendCommand("Z3DOWN")
-        try await Task.sleep(for: .milliseconds(200))
-        try await sendCommand("Z3?")
-        try await Task.sleep(for: .milliseconds(100))
-        readResponses()
+        try await zoneVolumeStep("DOWN", prefix: "Z3", query: "Z3?")
     }
 
     func setZone3Mute(_ muted: Bool) async throws {
-        try await sendCommand(muted ? "Z3MUON" : "Z3MUOFF")
-        state.zone3.isMuted = muted
+        try await setZoneMute(muted, prefix: "Z3", zone: \.zone3)
     }
 
     func setZone3Input(_ input: String) async throws {
-        try await sendCommand("Z3\(input)")
-        state.zone3.currentInput = input
+        try await setZoneInput(input, prefix: "Z3", zone: \.zone3)
     }
 
     func refreshZone3State() async throws {
-        try await sendCommand("Z3?")
-        try await sendCommand("Z3MU?")
-        try await Task.sleep(for: .milliseconds(500))
-        readResponses()
+        try await refreshZoneState(prefix: "Z3")
     }
 
     // MARK: - Now Playing

@@ -201,7 +201,7 @@ enum IntentCommandSender {
 
             connection.start(queue: queue)
 
-            queue.asyncAfter(deadline: .now() + 3) {
+            queue.asyncAfter(deadline: .now() + DenonConstants.intentTimeout) {
                 connection.cancel()
                 continuationGuard.resumeOnce { continuation.resume(returning: false) }
             }

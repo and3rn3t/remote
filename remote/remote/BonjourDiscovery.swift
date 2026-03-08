@@ -21,7 +21,7 @@ struct DiscoveredReceiver: Identifiable, Hashable {
 ///
 /// Denon receivers advertise HTTP services that can be discovered via `_http._tcp`.
 /// Some models also advertise a Denon-specific `_denon._tcp` service.
-/// We browse both to maximize discovery coverage.
+/// We try the Denon-specific service first, then fall back to HTTP scanning.
 @Observable
 final class BonjourDiscovery {
     var discoveredReceivers: [DiscoveredReceiver] = []
@@ -32,9 +32,11 @@ final class BonjourDiscovery {
     private var denonBrowser: NWBrowser?
     private var resolvedHosts: Set<String> = []
     private var scanTimeoutTask: Task<Void, Never>?
+    private var httpFallbackTask: Task<Void, Never>?
 
     /// Start scanning for Denon receivers on the local network.
-    /// Automatically stops after `timeout` seconds.
+    /// Tries `_denon._tcp` first, falls back to `_http._tcp` after a short delay
+    /// if no receivers are found.
     func startScan(timeout: TimeInterval = 10) {
         stopScan()
 
@@ -43,20 +45,25 @@ final class BonjourDiscovery {
         errorMessage = nil
         isScanning = true
 
-        // Browse for HTTP services (most Denon receivers advertise this)
-        let httpParams = NWParameters()
-        httpParams.includePeerToPeer = true
-        httpBrowser = NWBrowser(for: .bonjour(type: "_http._tcp", domain: "local."), using: httpParams)
-        configureBrowser(httpBrowser)
-
-        // Browse for Denon-specific services
+        // First: browse for Denon-specific services (most targeted)
         let denonParams = NWParameters()
         denonParams.includePeerToPeer = true
         denonBrowser = NWBrowser(for: .bonjour(type: "_denon._tcp", domain: "local."), using: denonParams)
         configureBrowser(denonBrowser)
-
-        httpBrowser?.start(queue: .main)
         denonBrowser?.start(queue: .main)
+
+        // After 3 seconds, if no Denon-specific results, also try HTTP
+        httpFallbackTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            if self.discoveredReceivers.isEmpty {
+                let httpParams = NWParameters()
+                httpParams.includePeerToPeer = true
+                self.httpBrowser = NWBrowser(for: .bonjour(type: "_http._tcp", domain: "local."), using: httpParams)
+                self.configureBrowser(self.httpBrowser)
+                self.httpBrowser?.start(queue: .main)
+            }
+        }
 
         // Auto-stop after timeout
         scanTimeoutTask = Task { @MainActor in
@@ -71,6 +78,8 @@ final class BonjourDiscovery {
     func stopScan() {
         scanTimeoutTask?.cancel()
         scanTimeoutTask = nil
+        httpFallbackTask?.cancel()
+        httpFallbackTask = nil
         httpBrowser?.cancel()
         denonBrowser?.cancel()
         httpBrowser = nil

@@ -60,6 +60,7 @@ struct DenonStateTests {
 
 // MARK: - DenonAPI Response Parsing Tests
 
+@MainActor
 struct DenonAPIParsingTests {
 
     @Test func parsePowerOnResponse() {
@@ -154,6 +155,7 @@ struct DenonAPIInputTests {
 
 // MARK: - Zone 2/3 Parsing Tests
 
+@MainActor
 struct ZoneParsingTests {
 
     @Test func parseZone2PowerOn() {
@@ -224,6 +226,7 @@ struct ZoneParsingTests {
 
 // MARK: - Now Playing Parsing Tests
 
+@MainActor
 struct NowPlayingParsingTests {
 
     @Test func parseNowPlayingLines() {
@@ -252,6 +255,7 @@ struct NowPlayingParsingTests {
 
 // MARK: - Surround Mode Tests
 
+@MainActor
 struct SurroundModeTests {
 
     @Test func availableSurroundModesNotEmpty() {
@@ -278,6 +282,7 @@ struct SurroundModeTests {
 
 // MARK: - ConnectionLogger Tests
 
+@MainActor
 struct ConnectionLoggerTests {
 
     @Test func logAddsEntry() {
@@ -329,6 +334,7 @@ struct AppSettingsTests {
 
 // MARK: - DenonAPI Reconnection State Tests
 
+@MainActor
 struct ReconnectionStateTests {
 
     @Test func initialReconnectionState() {
@@ -348,6 +354,7 @@ struct ReconnectionStateTests {
 
 // MARK: - Sleep Timer Parsing Tests
 
+@MainActor
 struct SleepTimerTests {
 
     @Test func parseSleepTimerOff() {
@@ -377,6 +384,7 @@ struct SleepTimerTests {
 
 // MARK: - Tone/EQ Parsing Tests
 
+@MainActor
 struct ToneControlTests {
 
     @Test func parseBassResponse() {
@@ -400,6 +408,7 @@ struct ToneControlTests {
 
 // MARK: - Dynamic Volume/EQ Tests
 
+@MainActor
 struct DynamicAudioTests {
 
     @Test func parseDynamicVolumeResponse() {
@@ -435,6 +444,7 @@ struct DynamicAudioTests {
 
 // MARK: - Receiver Info Parsing Tests
 
+@MainActor
 struct ReceiverInfoTests {
 
     @Test func parseModelResponse() {
@@ -458,6 +468,7 @@ struct ReceiverInfoTests {
 
 // MARK: - Tuner Tests
 
+@MainActor
 struct TunerTests {
 
     @Test func isTunerActiveDetection() {
@@ -589,5 +600,300 @@ struct PadLayoutTests {
     @Test func receiverHasPortForDisplay() {
         let receiver = DenonReceiver(name: "Test", ipAddress: "10.0.0.1", port: 2323)
         #expect(receiver.port == 2323)
+    }
+}
+
+// MARK: - Zone Volume Clamping Tests
+
+@MainActor
+struct ZoneVolumeClampingTests {
+
+    @Test func zone2VolumeClampedToMax() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("Z2999\r")
+        #expect(api.state.zone2.volume <= DenonConstants.maxVolume)
+    }
+
+    @Test func zone3VolumeClampedToMax() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("Z3999\r")
+        #expect(api.state.zone3.volume <= DenonConstants.maxVolume)
+    }
+
+    @Test func zone2VolumeClampedToMin() {
+        let api = DenonAPI()
+        api.state.zone2.volume = 50
+        api.parseResponseForTesting("Z200\r")
+        #expect(api.state.zone2.volume == 0)
+    }
+
+    @Test func zone3VolumeNormalRange() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("Z350\r")
+        #expect(api.state.zone3.volume == 50)
+    }
+}
+
+// MARK: - Generic Zone Parser Tests
+
+@MainActor
+struct GenericZoneParserTests {
+
+    @Test func zone2PowerOnViaGenericParser() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("Z2ON\r")
+        #expect(api.state.zone2.isPowerOn == true)
+    }
+
+    @Test func zone3PowerOffViaGenericParser() {
+        let api = DenonAPI()
+        api.state.zone3.isPowerOn = true
+        api.parseResponseForTesting("Z3OFF\r")
+        #expect(api.state.zone3.isPowerOn == false)
+    }
+
+    @Test func zone2MuteOnViaGenericParser() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("Z2MUON\r")
+        #expect(api.state.zone2.isMuted == true)
+    }
+
+    @Test func zone3MuteOffViaGenericParser() {
+        let api = DenonAPI()
+        api.state.zone3.isMuted = true
+        api.parseResponseForTesting("Z3MUOFF\r")
+        #expect(api.state.zone3.isMuted == false)
+    }
+
+    @Test func zone2InputViaGenericParser() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("Z2GAME\r")
+        #expect(api.state.zone2.currentInput == "GAME")
+    }
+
+    @Test func zone3InputViaGenericParser() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("Z3SPOTIFY\r")
+        #expect(api.state.zone3.currentInput == "SPOTIFY")
+    }
+
+    @Test func zonesIndependentFromMainZone() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("PWON\rMV50\rSIBD\rZ2ON\rZ240\rZ2GAME\rZ3ON\rZ335\rZ3NET\r")
+        #expect(api.state.isPowerOn == true)
+        #expect(api.state.volume == 50)
+        #expect(api.state.currentInput == "BD")
+        #expect(api.state.zone2.isPowerOn == true)
+        #expect(api.state.zone2.volume == 40)
+        #expect(api.state.zone2.currentInput == "GAME")
+        #expect(api.state.zone3.isPowerOn == true)
+        #expect(api.state.zone3.volume == 35)
+        #expect(api.state.zone3.currentInput == "NET")
+    }
+}
+
+// MARK: - Error Type Tests
+
+struct DenonErrorTests {
+
+    @Test func allErrorsHaveDescriptions() {
+        let errors: [DenonError] = [
+            .connectionFailed, .connectionTimeout, .connectionRefused,
+            .notConnected, .disconnected, .commandFailed
+        ]
+        for error in errors {
+            #expect(error.errorDescription != nil)
+            #expect(!error.errorDescription!.isEmpty)
+        }
+    }
+
+    @Test func allErrorsHaveRecoverySuggestions() {
+        let errors: [DenonError] = [
+            .connectionFailed, .connectionTimeout, .connectionRefused,
+            .notConnected, .disconnected, .commandFailed
+        ]
+        for error in errors {
+            #expect(error.recoverySuggestion != nil)
+            #expect(!error.recoverySuggestion!.isEmpty)
+        }
+    }
+}
+
+// MARK: - DenonConstants Tests
+
+struct DenonConstantsTests {
+
+    @Test func toneLabelPositive() {
+        #expect(DenonConstants.toneLabel(52) == "+2 dB")
+    }
+
+    @Test func toneLabelNegative() {
+        #expect(DenonConstants.toneLabel(48) == "-2 dB")
+    }
+
+    @Test func toneLabelCenter() {
+        #expect(DenonConstants.toneLabel(50) == "0 dB")
+    }
+
+    @Test func toneLabelExtremes() {
+        #expect(DenonConstants.toneLabel(44) == "-6 dB")
+        #expect(DenonConstants.toneLabel(56) == "+6 dB")
+    }
+
+    @Test func networkInputsContainsExpectedSources() {
+        #expect(DenonConstants.networkInputs.contains("NET"))
+        #expect(DenonConstants.networkInputs.contains("SPOTIFY"))
+        #expect(DenonConstants.networkInputs.contains("BT"))
+        #expect(!DenonConstants.networkInputs.contains("BD"))
+        #expect(!DenonConstants.networkInputs.contains("GAME"))
+    }
+
+    @Test func maxVolumeIsReasonable() {
+        #expect(DenonConstants.maxVolume == 98)
+        #expect(DenonConstants.maxVolume > 0)
+    }
+}
+
+// MARK: - Input Display Name Tests
+
+struct InputDisplayNameTests {
+
+    @Test func knownInputCodesReturnFriendlyNames() {
+        #expect(DenonInputs.displayName(for: "BD") == "Blu-ray")
+        #expect(DenonInputs.displayName(for: "GAME") == "Game")
+        #expect(DenonInputs.displayName(for: "TUNER") == "Tuner")
+    }
+
+    @Test func unknownInputCodeReturnsSelf() {
+        #expect(DenonInputs.displayName(for: "UNKNOWN") == "UNKNOWN")
+    }
+
+    @Test func allInputsHaveIcons() {
+        for input in DenonInputs.all {
+            let icon = DenonInputs.icon(for: input.code)
+            #expect(!icon.isEmpty)
+        }
+    }
+}
+
+// MARK: - Surround Mode Display Name Tests
+
+struct SurroundModeDisplayNameTests {
+
+    @Test func knownModeReturnsDisplayName() {
+        #expect(DenonSurroundModes.displayName(for: "STEREO") == "Stereo")
+        #expect(DenonSurroundModes.displayName(for: "DOLBY ATMOS") == "Dolby Atmos")
+    }
+
+    @Test func unknownModeReturnsSelf() {
+        #expect(DenonSurroundModes.displayName(for: "CUSTOM") == "CUSTOM")
+    }
+}
+
+// MARK: - NowPlaying Info Tests
+
+struct NowPlayingInfoTests {
+
+    @Test func emptyInfoIsEmpty() {
+        let info = NowPlayingInfo()
+        #expect(info.isEmpty)
+    }
+
+    @Test func anyLineNonEmptyMakesNotEmpty() {
+        var info = NowPlayingInfo()
+        info.line1 = "Artist"
+        #expect(!info.isEmpty)
+    }
+
+    @Test func clearingAllLinesMakesEmpty() {
+        var info = NowPlayingInfo()
+        info.line1 = "A"
+        info.line2 = "B"
+        info.line3 = "C"
+        info.line4 = "D"
+        info.line1 = ""
+        info.line2 = ""
+        info.line3 = ""
+        info.line4 = ""
+        #expect(info.isEmpty)
+    }
+}
+
+// MARK: - Multi-response Parsing Edge Cases
+
+@MainActor
+struct EdgeCaseParsingTests {
+
+    @Test func parseResponseWithEmptyLines() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("\r\r\rPWON\r\r\r")
+        #expect(api.state.isPowerOn == true)
+    }
+
+    @Test func parseNowPlayingClearsOnEmptyLines() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("NSE1Artist\rNSE3Track\r")
+        #expect(api.state.nowPlaying.line1 == "Artist")
+        #expect(api.state.nowPlaying.line3 == "Track")
+        // Simulate cleared now-playing
+        api.parseResponseForTesting("NSE1\rNSE3\r")
+        #expect(api.state.nowPlaying.line1 == "")
+        #expect(api.state.nowPlaying.line3 == "")
+        #expect(api.state.nowPlaying.isEmpty)
+    }
+
+    @Test func parseReceiverInfoModel() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("SSINFAISMD AVR-X3800H\r")
+        #expect(api.state.receiverModel == "AVR-X3800H")
+    }
+
+    @Test func parseReceiverInfoFirmware() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("SSINFAISFSV 0100-0020-1050\r")
+        #expect(api.state.firmwareVersion == "0100-0020-1050")
+    }
+
+    @Test func parseMixedZoneAndMainResponses() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("PWON\rZ2ON\rMV50\rZ240\rMUOFF\rZ2MUON\rSIGAME\rZ2NET\r")
+        #expect(api.state.isPowerOn == true)
+        #expect(api.state.volume == 50)
+        #expect(api.state.isMuted == false)
+        #expect(api.state.currentInput == "GAME")
+        #expect(api.state.zone2.isPowerOn == true)
+        #expect(api.state.zone2.volume == 40)
+        #expect(api.state.zone2.isMuted == true)
+        #expect(api.state.zone2.currentInput == "NET")
+    }
+}
+
+// MARK: - ReceiverStatus Codable Tests
+
+struct ReceiverStatusTests {
+
+    @Test func placeholderHasDefaults() {
+        let placeholder = ReceiverStatus.placeholder
+        #expect(placeholder.receiverName == "Receiver")
+        #expect(placeholder.isPowerOn == false)
+        #expect(placeholder.volume == 0)
+    }
+
+    @Test func encodingAndDecoding() throws {
+        let status = ReceiverStatus(
+            receiverName: "Test",
+            ipAddress: "192.168.1.1",
+            port: 23,
+            isPowerOn: true,
+            volume: 55,
+            currentInput: "GAME",
+            lastUpdated: Date(timeIntervalSince1970: 1000)
+        )
+        let data = try JSONEncoder().encode(status)
+        let decoded = try JSONDecoder().decode(ReceiverStatus.self, from: data)
+        #expect(decoded.receiverName == "Test")
+        #expect(decoded.isPowerOn == true)
+        #expect(decoded.volume == 55)
+        #expect(decoded.currentInput == "GAME")
     }
 }

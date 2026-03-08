@@ -11,6 +11,7 @@ enum DenonConstants {
     static let defaultPort = 23
     static let maxVolume = 98
     static let connectionTimeout: TimeInterval = 5.0
+    static let intentTimeout: TimeInterval = 5.0
     static let maxReconnectAttempts = 5
     static let readBufferSize = 4096
     static let maxLogEntries = 500

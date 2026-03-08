@@ -64,8 +64,8 @@ enum DenonCommandSender {
 
             connection.start(queue: queue)
 
-            // Timeout after 3 seconds
-            queue.asyncAfter(deadline: .now() + 3) {
+            // Timeout after configured duration
+            queue.asyncAfter(deadline: .now() + 5) {
                 connection.cancel()
                 continuationGuard.resumeOnce { continuation.resume(returning: false) }
             }
@@ -74,9 +74,12 @@ enum DenonCommandSender {
 }
 
 /// Ensures a continuation is only resumed once, even with multiple callbacks.
-private final class ContinuationGuard: @unchecked Sendable {
-    private var resumed = false
-    func resumeOnce(_ action: () -> Void) {
+private final class ContinuationGuard: Sendable {
+    nonisolated(unsafe) private let lock = NSLock()
+    nonisolated(unsafe) private var resumed = false
+    nonisolated func resumeOnce(_ action: () -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
         guard !resumed else { return }
         resumed = true
         action()
