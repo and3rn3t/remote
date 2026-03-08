@@ -30,7 +30,7 @@ final class remoteUITests: XCTestCase {
 
     @MainActor
     func testAddReceiverButtonExists() throws {
-        let addButton = app.buttons["add"]
+        let addButton = app.buttons["Add Receiver"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 5))
     }
 
@@ -38,7 +38,7 @@ final class remoteUITests: XCTestCase {
 
     @MainActor
     func testAddReceiverSheetPresents() throws {
-        let addButton = app.buttons["add"]
+        let addButton = app.buttons["Add Receiver"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 5))
         addButton.tap()
 
@@ -48,7 +48,7 @@ final class remoteUITests: XCTestCase {
 
     @MainActor
     func testAddReceiverSheetCanBeDismissed() throws {
-        let addButton = app.buttons["add"]
+        let addButton = app.buttons["Add Receiver"]
         XCTAssertTrue(addButton.waitForExistence(timeout: 5))
         addButton.tap()
 

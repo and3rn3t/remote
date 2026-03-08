@@ -11,36 +11,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Build & Test job is disabled until Xcode 26 is available on GitHub Actions runners.
-  # The macos-15 runners only ship Xcode 16.x, but this project requires Xcode 26 (iOS 26 SDK).
-  # Uncomment and update when a runner with Xcode 26 becomes available.
-  #
-  # build-and-test:
-  #   name: Build & Test
-  #   runs-on: macos-15
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-  #     - name: Select Xcode
-  #       run: sudo xcode-select -s /Applications/Xcode_26.app/Contents/Developer
-  #     - name: Show Xcode version
-  #       run: xcodebuild -version
-  #     - name: Build
-  #       run: |
-  #         xcodebuild build \
-  #           -project remote/remote.xcodeproj \
-  #           -scheme remote \
-  #           -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  #           -skipPackagePluginValidation \
-  #           CODE_SIGNING_ALLOWED=NO | xcpretty
-  #     - name: Test
-  #       run: |
-  #         xcodebuild test \
-  #           -project remote/remote.xcodeproj \
-  #           -scheme remote \
-  #           -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  #           -skipPackagePluginValidation \
-  #           CODE_SIGNING_ALLOWED=NO | xcpretty
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project remote/remote.xcodeproj \
+            -scheme remote \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.0' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO | xcpretty
+
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project remote/remote.xcodeproj \
+            -scheme remote \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.0' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO | xcpretty
 
   lint:
     name: SwiftLint
