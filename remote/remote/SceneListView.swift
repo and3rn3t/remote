@@ -177,7 +177,7 @@ struct SceneRowView: View {
     }
 
     private func inputName(for code: String) -> String {
-        DenonAPI.availableInputs.first { $0.code == code }?.name ?? code
+        DenonInputs.displayName(for: code)
     }
 }
 
@@ -308,10 +308,10 @@ struct SaveSceneView: View {
     }
 
     private func inputName(for code: String) -> String {
-        DenonAPI.availableInputs.first { $0.code == code }?.name ?? code
+        DenonInputs.displayName(for: code)
     }
 
     private func surroundName(for code: String) -> String {
-        DenonAPI.availableSurroundModes.first { $0.code == code }?.name ?? code
+        DenonSurroundModes.displayName(for: code)
     }
 }

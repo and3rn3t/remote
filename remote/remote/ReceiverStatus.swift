@@ -28,4 +28,14 @@ struct ReceiverStatus: Codable {
               let data = try? JSONEncoder().encode(self) else { return }
         defaults.set(data, forKey: Self.statusKey)
     }
+
+    static let placeholder = Self(
+        receiverName: "Receiver",
+        ipAddress: "0.0.0.0",
+        port: 23,
+        isPowerOn: false,
+        volume: 0,
+        currentInput: "—",
+        lastUpdated: .now
+    )
 }

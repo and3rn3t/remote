@@ -73,15 +73,14 @@ final class DenonAPI {
     private var receiver: DenonReceiver?
     private var inputStream: InputStream?
     private var outputStream: OutputStream?
-    private var readBuffer = [UInt8](repeating: 0, count: 4096)
+    private var readBuffer = [UInt8](repeating: 0, count: DenonConstants.readBufferSize)
     private var connectionMonitorTask: Task<Void, Never>?
     private var reconnectAttempts = 0
-    private static let maxReconnectAttempts = 5
     private let logger = ConnectionLogger.shared
     private let liveActivity = LiveActivityManager.shared
 
     /// Timeout for establishing a TCP connection, in seconds.
-    var connectionTimeout: TimeInterval = 5.0
+    var connectionTimeout: TimeInterval = DenonConstants.connectionTimeout
 
     // MARK: - Connection Management
 
@@ -192,9 +191,9 @@ final class DenonAPI {
     }
 
     private func attemptReconnect() async {
-        guard let receiver, reconnectAttempts < Self.maxReconnectAttempts else {
-            logger.log("Reconnection failed after \(Self.maxReconnectAttempts) attempts", category: .error)
-            errorMessage = "Reconnection failed after \(Self.maxReconnectAttempts) attempts. Please reconnect manually."
+        guard let receiver, reconnectAttempts < DenonConstants.maxReconnectAttempts else {
+            logger.log("Reconnection failed after \(DenonConstants.maxReconnectAttempts) attempts", category: .error)
+            errorMessage = "Reconnection failed after \(DenonConstants.maxReconnectAttempts) attempts. Please reconnect manually."
             isReconnecting = false
             return
         }
@@ -202,7 +201,7 @@ final class DenonAPI {
         reconnectAttempts += 1
         currentReconnectAttempt = reconnectAttempts
         isReconnecting = true
-        logger.log("Reconnect attempt \(reconnectAttempts)/\(Self.maxReconnectAttempts)", category: .connection)
+        logger.log("Reconnect attempt \(reconnectAttempts)/\(DenonConstants.maxReconnectAttempts)", category: .connection)
 
         // Exponential backoff: 1s, 2s, 4s, 8s, 16s
         let delay = pow(2.0, Double(reconnectAttempts - 1))
@@ -220,11 +219,11 @@ final class DenonAPI {
             reconnectAttempts = 0
             isReconnecting = false
         } catch {
-            if reconnectAttempts < Self.maxReconnectAttempts {
+            if reconnectAttempts < DenonConstants.maxReconnectAttempts {
                 await attemptReconnect()
             } else {
                 isReconnecting = false
-                errorMessage = "Reconnection failed after \(Self.maxReconnectAttempts) attempts. Please reconnect manually."
+                errorMessage = "Reconnection failed after \(DenonConstants.maxReconnectAttempts) attempts. Please reconnect manually."
             }
         }
     }
@@ -511,9 +510,7 @@ final class DenonAPI {
     func setInput(_ input: String) async throws {
         try await sendCommand("SI\(input)")
         state.currentInput = input
-        // End Live Activity when switching away from network sources
-        let networkInputs = ["NET", "SPOTIFY", "BT", "USB/IPOD", "MPLAY"]
-        if !networkInputs.contains(input) {
+        if !DenonConstants.networkInputs.contains(input) {
             liveActivity.end()
         }
     }
@@ -635,14 +632,6 @@ final class DenonAPI {
 
     // MARK: - Sleep Timer
 
-    static let sleepTimerOptions: [(name: String, value: String)] = [
-        ("Off", "OFF"),
-        ("30 min", "030"),
-        ("60 min", "060"),
-        ("90 min", "090"),
-        ("120 min", "120"),
-    ]
-
     func setSleepTimer(_ value: String) async throws {
         try await sendCommand("SLP\(value)")
         if value == "OFF" {
@@ -682,13 +671,6 @@ final class DenonAPI {
     }
 
     // MARK: - Dynamic Volume / Dynamic EQ
-
-    static let dynamicVolumeOptions: [(name: String, code: String)] = [
-        ("Off", "OFF"),
-        ("Light", "LIT"),
-        ("Medium", "MED"),
-        ("Heavy", "HEV"),
-    ]
 
     func setDynamicVolume(_ mode: String) async throws {
         try await sendCommand("PSDYNVOL \(mode)")
@@ -754,50 +736,12 @@ final class DenonAPI {
     }
 }
 
-// MARK: - Input Sources
+// MARK: - Computed Properties
 
 extension DenonAPI {
-    static let availableInputs: [(name: String, code: String)] = [
-        ("Blu-ray", "BD"),
-        ("Game", "GAME"),
-        ("Media Player", "MPLAY"),
-        ("TV Audio", "TV"),
-        ("Cable/Sat", "SAT/CBL"),
-        ("DVD", "DVD"),
-        ("AUX1", "AUX1"),
-        ("AUX2", "AUX2"),
-        ("Tuner", "TUNER"),
-        ("Bluetooth", "BT"),
-        ("USB/iPod", "USB/IPOD"),
-        ("Network", "NET"),
-        ("Spotify", "SPOTIFY"),
-    ]
-
-    static let availableSurroundModes: [(name: String, code: String)] = [
-        ("Stereo", "STEREO"),
-        ("Direct", "DIRECT"),
-        ("Pure Direct", "PURE DIRECT"),
-        ("Multi Ch Stereo", "MCH STEREO"),
-        ("Dolby Digital", "DOLBY DIGITAL"),
-        ("Dolby Surround", "DOLBY SURROUND"),
-        ("Dolby Atmos", "DOLBY ATMOS"),
-        ("DTS Surround", "DTS SURROUND"),
-        ("DTS HD", "DTS HD"),
-        ("DTS Neural:X", "NEURAL:X"),
-        ("Multi Ch In", "MULTI CH IN"),
-        ("Rock Arena", "ROCK ARENA"),
-        ("Jazz Club", "JAZZ CLUB"),
-        ("Mono Movie", "MONO MOVIE"),
-        ("Matrix", "MATRIX"),
-        ("Game", "GAME"),
-        ("Virtual", "VIRTUAL"),
-        ("Auto", "AUTO"),
-    ]
-
     /// Returns true if the current input is a network-based source that may support now playing.
     var isNetworkSource: Bool {
-        let networkInputs = ["NET", "SPOTIFY", "BT", "USB/IPOD", "MPLAY"]
-        return networkInputs.contains(state.currentInput)
+        DenonConstants.networkInputs.contains(state.currentInput)
     }
 }
 
@@ -810,7 +754,6 @@ enum DenonError: LocalizedError {
     case notConnected
     case disconnected
     case commandFailed
-    case invalidResponse
 
     var errorDescription: String? {
         switch self {
@@ -826,8 +769,6 @@ enum DenonError: LocalizedError {
             return "Disconnected from receiver"
         case .commandFailed:
             return "Failed to send command"
-        case .invalidResponse:
-            return "Invalid response from receiver"
         }
     }
 
@@ -843,8 +784,6 @@ enum DenonError: LocalizedError {
             return "The connection was lost. Try reconnecting."
         case .commandFailed:
             return "The command could not be sent. Try again or reconnect."
-        case .invalidResponse:
-            return "The receiver sent an unexpected response."
         }
     }
 }

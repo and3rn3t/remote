@@ -30,7 +30,7 @@ final class ConnectionLogger {
     static let shared = ConnectionLogger()
 
     private(set) var entries: [LogEntry] = []
-    private let maxEntries = 500
+    private let maxEntries = DenonConstants.maxLogEntries
 
     private init() {}
 

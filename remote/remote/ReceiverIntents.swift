@@ -120,7 +120,7 @@ struct InputSourceEntityQuery: EntityQuery {
     }
 
     private func allSources() -> [InputSourceEntity] {
-        DenonAPI.availableInputs.map {
+        DenonInputs.all.map {
             InputSourceEntity(id: $0.code, code: $0.code, name: $0.name)
         }
     }

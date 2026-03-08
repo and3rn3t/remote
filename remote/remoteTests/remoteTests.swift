@@ -136,16 +136,16 @@ struct DenonAPIParsingTests {
 struct DenonAPIInputTests {
 
     @Test func availableInputsNotEmpty() {
-        #expect(!DenonAPI.availableInputs.isEmpty)
+        #expect(!DenonInputs.all.isEmpty)
     }
 
     @Test func availableInputsContainsBluray() {
-        let found = DenonAPI.availableInputs.contains { $0.code == "BD" }
+        let found = DenonInputs.all.contains { $0.code == "BD" }
         #expect(found)
     }
 
     @Test func allInputCodesAreNonEmpty() {
-        for input in DenonAPI.availableInputs {
+        for input in DenonInputs.all {
             #expect(!input.code.isEmpty)
             #expect(!input.name.isEmpty)
         }
@@ -255,11 +255,11 @@ struct NowPlayingParsingTests {
 struct SurroundModeTests {
 
     @Test func availableSurroundModesNotEmpty() {
-        #expect(!DenonAPI.availableSurroundModes.isEmpty)
+        #expect(!DenonSurroundModes.all.isEmpty)
     }
 
     @Test func surroundModesContainsStereo() {
-        let found = DenonAPI.availableSurroundModes.contains { $0.code == "STEREO" }
+        let found = DenonSurroundModes.all.contains { $0.code == "STEREO" }
         #expect(found)
     }
 
@@ -370,8 +370,8 @@ struct SleepTimerTests {
     }
 
     @Test func sleepTimerOptionsNotEmpty() {
-        #expect(!DenonAPI.sleepTimerOptions.isEmpty)
-        #expect(DenonAPI.sleepTimerOptions.first?.value == "OFF")
+        #expect(!DenonSleepTimer.options.isEmpty)
+        #expect(DenonSleepTimer.options.first?.value == "OFF")
     }
 }
 
@@ -422,7 +422,7 @@ struct DynamicAudioTests {
     }
 
     @Test func dynamicVolumeOptionsContainsOff() {
-        let found = DenonAPI.dynamicVolumeOptions.contains { $0.code == "OFF" }
+        let found = DenonDynamicVolume.options.contains { $0.code == "OFF" }
         #expect(found)
     }
 

@@ -19,7 +19,6 @@ struct ReceiverControlView: View {
     @State private var showingSettings = false
     @State private var selectedZone = 0  // 0 = Main, 1 = Zone 2, 2 = Zone 3
     @State private var volumeDebounceTask: Task<Void, Never>?
-
     @State private var toneDebounceTask: Task<Void, Never>?
     @State private var showingScenes = false
     @State private var showingSaveScene = false
@@ -79,22 +78,18 @@ struct ReceiverControlView: View {
 
     private var connectedView: some View {
         VStack(spacing: 24) {
-            // Zone Picker
             zonePicker
 
             if selectedZone == 0 {
-                // Main Zone
                 powerControl
                 volumeControl
                 inputSelection
                 surroundModeSection
 
-                // Now Playing (only for network sources)
                 if api.isNetworkSource {
                     nowPlayingSection
                 }
 
-                // Tuner presets (only when tuner is active)
                 if api.isTunerActive {
                     tunerPresetsSection
                 }
@@ -105,29 +100,9 @@ struct ReceiverControlView: View {
                 scenesSection
                 quickActions
             } else if selectedZone == 1 {
-                zoneControlView(
-                    zone: 2,
-                    zoneState: api.state.zone2,
-                    setPower: api.setZone2Power,
-                    setVolume: api.setZone2Volume,
-                    volumeUp: api.zone2VolumeUp,
-                    volumeDown: api.zone2VolumeDown,
-                    setMute: api.setZone2Mute,
-                    setInput: api.setZone2Input,
-                    refreshState: api.refreshZone2State
-                )
+                ZoneControlView(zone: 2, receiver: receiver, api: api, showingError: $showingError)
             } else {
-                zoneControlView(
-                    zone: 3,
-                    zoneState: api.state.zone3,
-                    setPower: api.setZone3Power,
-                    setVolume: api.setZone3Volume,
-                    volumeUp: api.zone3VolumeUp,
-                    volumeDown: api.zone3VolumeDown,
-                    setMute: api.setZone3Mute,
-                    setInput: api.setZone3Input,
-                    refreshState: api.refreshZone3State
-                )
+                ZoneControlView(zone: 3, receiver: receiver, api: api, showingError: $showingError)
             }
         }
         .animation(.smooth, value: selectedZone)
@@ -150,14 +125,7 @@ struct ReceiverControlView: View {
                         get: { api.state.isPowerOn },
                         set: { newValue in
                             playHaptic()
-                            Task {
-                                do {
-                                    try await api.setPower(newValue)
-                                } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
+                            apiAction { try await api.setPower(newValue) }
                         }
                     ))
                     .labelsHidden()
@@ -173,7 +141,6 @@ struct ReceiverControlView: View {
     private var volumeControl: some View {
         GlassEffectContainer(spacing: 20.0) {
             VStack(spacing: 20) {
-                // Volume Level Display
                 HStack {
                     Image(systemName: api.state.isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
                         .font(.title2)
@@ -189,7 +156,6 @@ struct ReceiverControlView: View {
                         .foregroundStyle(.primary)
                 }
 
-                // Volume Slider
                 VStack(spacing: 12) {
                     Slider(
                         value: Binding(
@@ -199,7 +165,7 @@ struct ReceiverControlView: View {
                                 api.state.volume = target
                                 volumeDebounceTask?.cancel()
                                 volumeDebounceTask = Task {
-                                    try? await Task.sleep(for: .milliseconds(150))
+                                    try? await Task.sleep(for: .milliseconds(DenonConstants.volumeDebounceMilliseconds))
                                     guard !Task.isCancelled else { return }
                                     do {
                                         try await api.setVolume(target)
@@ -217,18 +183,10 @@ struct ReceiverControlView: View {
                     .accessibilityValue("\(api.state.volume) decibels")
                     .accessibilityHint("Adjusts volume from 0 to \(receiver.volumeLimit)")
 
-                    // Volume buttons
                     HStack(spacing: 16) {
                         Button {
                             playHaptic(.light)
-                            Task {
-                                do {
-                                    try await api.volumeDown()
-                                } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
+                            apiAction { try await api.volumeDown() }
                         } label: {
                             Label("Volume Down", systemImage: "minus.circle.fill")
                                 .labelStyle(.iconOnly)
@@ -241,14 +199,7 @@ struct ReceiverControlView: View {
 
                         Button {
                             playHaptic(.light)
-                            Task {
-                                do {
-                                    try await api.setMute(!api.state.isMuted)
-                                } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
+                            apiAction { try await api.setMute(!api.state.isMuted) }
                         } label: {
                             Label("Mute", systemImage: api.state.isMuted ? "speaker.slash.fill" : "speaker.fill")
                                 .labelStyle(.iconOnly)
@@ -262,14 +213,7 @@ struct ReceiverControlView: View {
 
                         Button {
                             playHaptic(.light)
-                            Task {
-                                do {
-                                    try await api.volumeUp()
-                                } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
+                            apiAction { try await api.volumeUp() }
                         } label: {
                             Label("Volume Up", systemImage: "plus.circle.fill")
                                 .labelStyle(.iconOnly)
@@ -301,20 +245,13 @@ struct ReceiverControlView: View {
 
             GlassEffectContainer(spacing: 12.0) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
-                    ForEach(DenonAPI.availableInputs, id: \.code) { input in
+                    ForEach(DenonInputs.all, id: \.code) { input in
                         Button {
                             playHaptic(.light)
-                            Task {
-                                do {
-                                    try await api.setInput(input.code)
-                                } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
+                            apiAction { try await api.setInput(input.code) }
                         } label: {
                             VStack(spacing: 8) {
-                                Image(systemName: iconForInput(input.code))
+                                Image(systemName: DenonInputs.icon(for: input.code))
                                     .font(.title2)
                                     .foregroundStyle(api.state.currentInput == input.code ? .white : .primary)
 
@@ -337,6 +274,57 @@ struct ReceiverControlView: View {
                         .accessibilityLabel(input.name)
                         .accessibilityValue(api.state.currentInput == input.code ? "Selected" : "")
                         .accessibilityAddTraits(api.state.currentInput == input.code ? .isSelected : [])
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Surround Mode
+
+    private var surroundModeSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "hifispeaker.and.appletv.fill")
+                    .font(.title3)
+                    .foregroundStyle(.teal)
+
+                Text("Surround Mode")
+                    .font(.headline)
+
+                Spacer()
+
+                Text(api.state.surroundMode)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 4)
+
+            GlassEffectContainer(spacing: 12.0) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 12) {
+                    ForEach(DenonSurroundModes.all, id: \.code) { mode in
+                        Button {
+                            playHaptic(.light)
+                            apiAction { try await api.setSurroundMode(mode.code) }
+                        } label: {
+                            Text(mode.name)
+                                .font(.caption)
+                                .foregroundStyle(api.state.surroundMode == mode.code ? .white : .primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+                        .glassEffect(
+                            api.state.surroundMode == mode.code ?
+                                .regular.tint(.teal).interactive() :
+                                .regular.interactive(),
+                            in: .rect(cornerRadius: 12)
+                        )
+                        .accessibilityLabel(mode.name)
+                        .accessibilityValue(api.state.surroundMode == mode.code ? "Selected" : "")
+                        .accessibilityAddTraits(api.state.surroundMode == mode.code ? .isSelected : [])
                     }
                 }
             }
@@ -367,19 +355,12 @@ struct ReceiverControlView: View {
 
             GlassEffectContainer(spacing: 12.0) {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 12) {
-                    ForEach(DenonAPI.sleepTimerOptions, id: \.value) { option in
+                    ForEach(DenonSleepTimer.options, id: \.value) { option in
                         let isActive = (option.value == "OFF" && api.state.sleepTimer == nil) ||
                             (Int(option.value) == api.state.sleepTimer)
                         Button {
                             playHaptic(.light)
-                            Task {
-                                do {
-                                    try await api.setSleepTimer(option.value)
-                                } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
+                            apiAction { try await api.setSleepTimer(option.value) }
                         } label: {
                             Text(option.name)
                                 .font(.caption)
@@ -419,85 +400,63 @@ struct ReceiverControlView: View {
 
             GlassEffectContainer(spacing: 12.0) {
                 VStack(spacing: 20) {
-                    // Bass
-                    VStack(spacing: 8) {
-                        HStack {
-                            Text("Bass")
-                                .font(.subheadline)
-                            Spacer()
-                            Text(toneLabel(api.state.bass))
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.secondary)
-                        }
-                        Slider(
-                            value: Binding(
-                                get: { Double(api.state.bass) },
-                                set: { newValue in
-                                    let target = Int(newValue)
-                                    api.state.bass = target
-                                    toneDebounceTask?.cancel()
-                                    toneDebounceTask = Task {
-                                        try? await Task.sleep(for: .milliseconds(150))
-                                        guard !Task.isCancelled else { return }
-                                        do {
-                                            try await api.setBass(target)
-                                        } catch {
-                                            api.errorMessage = error.localizedDescription
-                                            showingError = true
-                                        }
-                                    }
-                                }
-                            ),
-                            in: 44...56,
-                            step: 1
-                        )
-                        .tint(.cyan)
-                        .accessibilityLabel("Bass")
-                        .accessibilityValue(toneLabel(api.state.bass))
-                        .accessibilityHint("Adjusts bass from minus 6 to plus 6 decibels")
-                    }
+                    toneSlider(label: "Bass",
+                               value: api.state.bass,
+                               onSet: { api.state.bass = $0 },
+                               apiCall: api.setBass)
 
-                    // Treble
-                    VStack(spacing: 8) {
-                        HStack {
-                            Text("Treble")
-                                .font(.subheadline)
-                            Spacer()
-                            Text(toneLabel(api.state.treble))
-                                .font(.subheadline.bold())
-                                .foregroundStyle(.secondary)
-                        }
-                        Slider(
-                            value: Binding(
-                                get: { Double(api.state.treble) },
-                                set: { newValue in
-                                    let target = Int(newValue)
-                                    api.state.treble = target
-                                    toneDebounceTask?.cancel()
-                                    toneDebounceTask = Task {
-                                        try? await Task.sleep(for: .milliseconds(150))
-                                        guard !Task.isCancelled else { return }
-                                        do {
-                                            try await api.setTreble(target)
-                                        } catch {
-                                            api.errorMessage = error.localizedDescription
-                                            showingError = true
-                                        }
-                                    }
-                                }
-                            ),
-                            in: 44...56,
-                            step: 1
-                        )
-                        .tint(.cyan)
-                        .accessibilityLabel("Treble")
-                        .accessibilityValue(toneLabel(api.state.treble))
-                        .accessibilityHint("Adjusts treble from minus 6 to plus 6 decibels")
-                    }
+                    toneSlider(label: "Treble",
+                               value: api.state.treble,
+                               onSet: { api.state.treble = $0 },
+                               apiCall: api.setTreble)
                 }
                 .padding(20)
                 .glassEffect(.regular, in: .rect(cornerRadius: 16))
             }
+        }
+    }
+
+    private func toneSlider(
+        label: String,
+        value: Int,
+        onSet: @escaping (Int) -> Void,
+        apiCall: @escaping (Int) async throws -> Void
+    ) -> some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text(label)
+                    .font(.subheadline)
+                Spacer()
+                Text(DenonConstants.toneLabel(value))
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+            }
+            Slider(
+                value: Binding(
+                    get: { Double(value) },
+                    set: { newValue in
+                        let target = Int(newValue)
+                        onSet(target)
+                        toneDebounceTask?.cancel()
+                        toneDebounceTask = Task {
+                            try? await Task.sleep(for: .milliseconds(DenonConstants.volumeDebounceMilliseconds))
+                            guard !Task.isCancelled else { return }
+                            do {
+                                try await apiCall(target)
+                            } catch {
+                                api.errorMessage = error.localizedDescription
+                                showingError = true
+                            }
+                        }
+                    }
+                ),
+                in: Double(DenonConstants.toneMin)...Double(DenonConstants.toneMax),
+                step: 1
+            )
+            .tint(.cyan)
+            .accessibilityLabel(label)
+            .accessibilityValue(DenonConstants.toneLabel(value))
+            .accessibilityHint("Adjusts \(label.lowercased()) from minus 6 to plus 6 decibels")
         }
     }
 
@@ -517,7 +476,6 @@ struct ReceiverControlView: View {
 
             GlassEffectContainer(spacing: 12.0) {
                 VStack(spacing: 16) {
-                    // Dynamic EQ Toggle
                     HStack {
                         Image(systemName: "ear.fill")
                             .foregroundStyle(.green)
@@ -528,14 +486,7 @@ struct ReceiverControlView: View {
                             get: { api.state.dynamicEQ },
                             set: { newValue in
                                 playHaptic(.light)
-                                Task {
-                                    do {
-                                        try await api.setDynamicEQ(newValue)
-                                    } catch {
-                                        api.errorMessage = error.localizedDescription
-                                        showingError = true
-                                    }
-                                }
+                                apiAction { try await api.setDynamicEQ(newValue) }
                             }
                         ))
                         .labelsHidden()
@@ -545,7 +496,6 @@ struct ReceiverControlView: View {
 
                     Divider()
 
-                    // Dynamic Volume
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Image(systemName: "speaker.wave.2.fill")
@@ -559,17 +509,10 @@ struct ReceiverControlView: View {
                         }
 
                         HStack(spacing: 8) {
-                            ForEach(DenonAPI.dynamicVolumeOptions, id: \.code) { option in
+                            ForEach(DenonDynamicVolume.options, id: \.code) { option in
                                 Button {
                                     playHaptic(.light)
-                                    Task {
-                                        do {
-                                            try await api.setDynamicVolume(option.code)
-                                        } catch {
-                                            api.errorMessage = error.localizedDescription
-                                            showingError = true
-                                        }
-                                    }
+                                    apiAction { try await api.setDynamicVolume(option.code) }
                                 } label: {
                                     Text(option.name)
                                         .font(.caption)
@@ -615,14 +558,7 @@ struct ReceiverControlView: View {
                 HStack(spacing: 12) {
                     Button {
                         playHaptic(.light)
-                        Task {
-                            do {
-                                try await api.tunerPresetDown()
-                            } catch {
-                                api.errorMessage = error.localizedDescription
-                                showingError = true
-                            }
-                        }
+                        apiAction { try await api.tunerPresetDown() }
                     } label: {
                         VStack(spacing: 8) {
                             Image(systemName: "chevron.left")
@@ -639,14 +575,7 @@ struct ReceiverControlView: View {
 
                     Button {
                         playHaptic(.light)
-                        Task {
-                            do {
-                                try await api.tunerPresetUp()
-                            } catch {
-                                api.errorMessage = error.localizedDescription
-                                showingError = true
-                            }
-                        }
+                        apiAction { try await api.tunerPresetUp() }
                     } label: {
                         VStack(spacing: 8) {
                             Image(systemName: "chevron.right")
@@ -737,14 +666,7 @@ struct ReceiverControlView: View {
                 HStack(spacing: 12) {
                     Button {
                         playHaptic(.light)
-                        Task {
-                            do {
-                                try await api.refreshState()
-                            } catch {
-                                api.errorMessage = error.localizedDescription
-                                showingError = true
-                            }
-                        }
+                        apiAction { try await api.refreshState() }
                     } label: {
                         VStack(spacing: 8) {
                             Image(systemName: "arrow.clockwise")
@@ -781,335 +703,6 @@ struct ReceiverControlView: View {
         }
     }
 
-    // MARK: - Zone Picker
-
-    private var zonePicker: some View {
-        Picker("Zone", selection: $selectedZone) {
-            Text("Main").tag(0)
-            Text("Zone 2").tag(1)
-            Text("Zone 3").tag(2)
-        }
-        .pickerStyle(.segmented)
-        .accessibilityLabel("Zone selector")
-    }
-
-    // MARK: - Zone Control View (Zone 2/3)
-
-    private func zoneControlView(
-        zone: Int,
-        zoneState: ZoneState,
-        setPower: @escaping (Bool) async throws -> Void,
-        setVolume: @escaping (Int) async throws -> Void,
-        volumeUp: @escaping () async throws -> Void,
-        volumeDown: @escaping () async throws -> Void,
-        setMute: @escaping (Bool) async throws -> Void,
-        setInput: @escaping (String) async throws -> Void,
-        refreshState: @escaping () async throws -> Void
-    ) -> some View {
-        VStack(spacing: 24) {
-            // Zone Power
-            zonePowerControl(zoneState: zoneState, setPower: setPower)
-
-            // Zone Volume
-            zoneVolumeControl(
-                zone: zone,
-                zoneState: zoneState,
-                setVolume: setVolume,
-                volumeUp: volumeUp,
-                volumeDown: volumeDown,
-                setMute: setMute
-            )
-
-            // Zone Input
-            zoneInputSelection(zone: zone, zoneState: zoneState, setInput: setInput)
-
-            // Zone Refresh
-            GlassEffectContainer(spacing: 12.0) {
-                Button {
-                    playHaptic(.light)
-                    Task {
-                        do {
-                            try await refreshState()
-                        } catch {
-                            api.errorMessage = error.localizedDescription
-                            showingError = true
-                        }
-                    }
-                } label: {
-                    VStack(spacing: 8) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.title2)
-                        Text("Refresh Zone \(zone)")
-                            .font(.caption)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                }
-                .buttonStyle(.glass)
-                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
-                .accessibilityLabel("Refresh Zone \(zone) state")
-            }
-        }
-    }
-
-    private func zonePowerControl(zoneState: ZoneState, setPower: @escaping (Bool) async throws -> Void) -> some View {
-        GlassEffectContainer(spacing: 20.0) {
-            VStack(spacing: 16) {
-                HStack {
-                    Image(systemName: "power")
-                        .font(.title2)
-                        .foregroundStyle(zoneState.isPowerOn ? .green : .secondary)
-
-                    Text(zoneState.isPowerOn ? "Powered On" : "Standby")
-                        .font(.headline)
-
-                    Spacer()
-
-                    Toggle("", isOn: Binding(
-                        get: { zoneState.isPowerOn },
-                        set: { newValue in
-                            playHaptic()
-                            Task {
-                                do {
-                                    try await setPower(newValue)
-                                } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
-                        }
-                    ))
-                    .labelsHidden()
-                    .accessibilityLabel("Zone Power")
-                    .accessibilityValue(zoneState.isPowerOn ? "On" : "Standby")
-                }
-            }
-            .padding(20)
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
-        }
-    }
-
-    private func zoneVolumeControl(
-        zone: Int,
-        zoneState: ZoneState,
-        setVolume: @escaping (Int) async throws -> Void,
-        volumeUp: @escaping () async throws -> Void,
-        volumeDown: @escaping () async throws -> Void,
-        setMute: @escaping (Bool) async throws -> Void
-    ) -> some View {
-        GlassEffectContainer(spacing: 20.0) {
-            VStack(spacing: 20) {
-                HStack {
-                    Image(systemName: zoneState.isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
-                        .font(.title2)
-                        .foregroundStyle(zoneState.isMuted ? .red : .blue)
-
-                    Text("Volume")
-                        .font(.headline)
-
-                    Spacer()
-
-                    Text("\(zoneState.volume)")
-                        .font(.title2.bold())
-                        .foregroundStyle(.primary)
-                }
-
-                VStack(spacing: 12) {
-                    Slider(
-                        value: Binding(
-                            get: { Double(zoneState.volume) },
-                            set: { newValue in
-                                let target = Int(newValue)
-                                volumeDebounceTask?.cancel()
-                                volumeDebounceTask = Task {
-                                    try? await Task.sleep(for: .milliseconds(150))
-                                    guard !Task.isCancelled else { return }
-                                    do {
-                                        try await setVolume(target)
-                                    } catch {
-                                        api.errorMessage = error.localizedDescription
-                                        showingError = true
-                                    }
-                                }
-                            }
-                        ),
-                        in: 0...Double(receiver.volumeLimit)
-                    )
-                    .tint(Double(zoneState.volume) > Double(receiver.volumeLimit) * 0.9 ? .red : .blue)
-                    .accessibilityLabel("Zone \(zone) Volume")
-                    .accessibilityValue("\(zoneState.volume) decibels")
-                    .accessibilityHint("Adjusts volume from 0 to \(receiver.volumeLimit)")
-
-                    HStack(spacing: 16) {
-                        Button {
-                            playHaptic(.light)
-                            Task {
-                                do { try await volumeDown() } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
-                        } label: {
-                            Label("Volume Down", systemImage: "minus.circle.fill")
-                                .labelStyle(.iconOnly)
-                                .font(.title)
-                        }
-                        .buttonStyle(.glass)
-                        .glassEffect(.regular.interactive(), in: .circle)
-                        .accessibilityLabel("Zone \(zone) Volume Down")
-
-                        Button {
-                            playHaptic(.light)
-                            Task {
-                                do { try await setMute(!zoneState.isMuted) } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
-                        } label: {
-                            Label("Mute", systemImage: zoneState.isMuted ? "speaker.slash.fill" : "speaker.fill")
-                                .labelStyle(.iconOnly)
-                                .font(.title3)
-                        }
-                        .buttonStyle(.glassProminent)
-                        .glassEffect(.regular.tint(zoneState.isMuted ? .red : .blue).interactive(), in: .rect(cornerRadius: 12))
-                        .accessibilityLabel(zoneState.isMuted ? "Zone \(zone) Unmute" : "Zone \(zone) Mute")
-
-                        Button {
-                            playHaptic(.light)
-                            Task {
-                                do { try await volumeUp() } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
-                        } label: {
-                            Label("Volume Up", systemImage: "plus.circle.fill")
-                                .labelStyle(.iconOnly)
-                                .font(.title)
-                        }
-                        .buttonStyle(.glass)
-                        .glassEffect(.regular.interactive(), in: .circle)
-                        .accessibilityLabel("Zone \(zone) Volume Up")
-                    }
-                }
-            }
-            .padding(20)
-            .glassEffect(.regular, in: .rect(cornerRadius: 16))
-        }
-    }
-
-    private func zoneInputSelection(zone: Int, zoneState: ZoneState, setInput: @escaping (String) async throws -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "tv.and.hifispeaker.fill")
-                    .font(.title3)
-                    .foregroundStyle(.purple)
-
-                Text("Zone \(zone) Input")
-                    .font(.headline)
-            }
-            .padding(.horizontal, 4)
-
-            GlassEffectContainer(spacing: 12.0) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
-                    ForEach(DenonAPI.availableInputs, id: \.code) { input in
-                        Button {
-                            playHaptic(.light)
-                            Task {
-                                do { try await setInput(input.code) } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
-                        } label: {
-                            VStack(spacing: 8) {
-                                Image(systemName: iconForInput(input.code))
-                                    .font(.title2)
-                                    .foregroundStyle(zoneState.currentInput == input.code ? .white : .primary)
-
-                                Text(input.name)
-                                    .font(.caption)
-                                    .foregroundStyle(zoneState.currentInput == input.code ? .white : .primary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                        }
-                        .buttonStyle(.plain)
-                        .glassEffect(
-                            zoneState.currentInput == input.code ?
-                                .regular.tint(.purple).interactive() :
-                                .regular.interactive(),
-                            in: .rect(cornerRadius: 12)
-                        )
-                        .accessibilityLabel(input.name)
-                        .accessibilityValue(zoneState.currentInput == input.code ? "Selected" : "")
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Surround Mode
-
-    private var surroundModeSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Image(systemName: "hifispeaker.and.appletv.fill")
-                    .font(.title3)
-                    .foregroundStyle(.teal)
-
-                Text("Surround Mode")
-                    .font(.headline)
-
-                Spacer()
-
-                Text(api.state.surroundMode)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 4)
-
-            GlassEffectContainer(spacing: 12.0) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 12) {
-                    ForEach(DenonAPI.availableSurroundModes, id: \.code) { mode in
-                        Button {
-                            playHaptic(.light)
-                            Task {
-                                do {
-                                    try await api.setSurroundMode(mode.code)
-                                } catch {
-                                    api.errorMessage = error.localizedDescription
-                                    showingError = true
-                                }
-                            }
-                        } label: {
-                            Text(mode.name)
-                                .font(.caption)
-                                .foregroundStyle(api.state.surroundMode == mode.code ? .white : .primary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                        }
-                        .buttonStyle(.plain)
-                        .glassEffect(
-                            api.state.surroundMode == mode.code ?
-                                .regular.tint(.teal).interactive() :
-                                .regular.interactive(),
-                            in: .rect(cornerRadius: 12)
-                        )
-                        .accessibilityLabel(mode.name)
-                        .accessibilityValue(api.state.surroundMode == mode.code ? "Selected" : "")
-                        .accessibilityAddTraits(api.state.surroundMode == mode.code ? .isSelected : [])
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: - Now Playing
 
     private var nowPlayingSection: some View {
@@ -1125,12 +718,7 @@ struct ReceiverControlView: View {
                 Spacer()
 
                 Button {
-                    Task {
-                        do { try await api.refreshNowPlaying() } catch {
-                            api.errorMessage = error.localizedDescription
-                            showingError = true
-                        }
-                    }
+                    apiAction { try await api.refreshNowPlaying() }
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(.caption)
@@ -1171,7 +759,6 @@ struct ReceiverControlView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    // Transport Controls
                     HStack(spacing: 20) {
                         transportButton(systemImage: "backward.fill", label: "Previous") {
                             try await api.transportSkipPrevious()
@@ -1199,12 +786,7 @@ struct ReceiverControlView: View {
     private func transportButton(systemImage: String, label: String, action: @escaping () async throws -> Void) -> some View {
         Button {
             playHaptic(.light)
-            Task {
-                do { try await action() } catch {
-                    api.errorMessage = error.localizedDescription
-                    showingError = true
-                }
-            }
+            apiAction(action)
         } label: {
             Image(systemName: systemImage)
                 .font(.title2)
@@ -1215,6 +797,18 @@ struct ReceiverControlView: View {
         .accessibilityLabel(label)
     }
 
+    // MARK: - Zone Picker
+
+    private var zonePicker: some View {
+        Picker("Zone", selection: $selectedZone) {
+            Text("Main").tag(0)
+            Text("Zone 2").tag(1)
+            Text("Zone 3").tag(2)
+        }
+        .pickerStyle(.segmented)
+        .accessibilityLabel("Zone selector")
+    }
+
     // MARK: - Disconnected View
 
     private var disconnectedView: some View {
@@ -1223,7 +817,7 @@ struct ReceiverControlView: View {
                 Image(systemName: api.isReconnecting ? "arrow.triangle.2.circlepath" : "antenna.radiowaves.left.and.right.slash")
                     .font(.system(size: 36))
                     .symbolEffect(.pulse, isActive: api.isReconnecting)
-                Text(api.isReconnecting ? "Reconnecting…" : "Not Connected")
+                Text(api.isReconnecting ? "Reconnecting\u{2026}" : "Not Connected")
                     .font(.headline)
             }
         } description: {
@@ -1233,10 +827,10 @@ struct ReceiverControlView: View {
                 if api.isReconnecting {
                     VStack(spacing: 8) {
                         ProgressView()
-                        Text("Attempt \(api.currentReconnectAttempt) of 5")
+                        Text("Attempt \(api.currentReconnectAttempt) of \(DenonConstants.maxReconnectAttempts)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text("Retrying in ~\(Int(pow(2.0, Double(api.currentReconnectAttempt - 1))))s…")
+                        Text("Retrying in ~\(Int(pow(2.0, Double(api.currentReconnectAttempt - 1))))s\u{2026}")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
@@ -1302,34 +896,19 @@ struct ReceiverControlView: View {
         }
     }
 
-    private func iconForInput(_ code: String) -> String {
-        switch code {
-        case "BD": return "opticaldiscdrive.fill"
-        case "GAME": return "gamecontroller.fill"
-        case "MPLAY": return "play.rectangle.fill"
-        case "TV": return "tv.fill"
-        case "SAT/CBL": return "square.stack.3d.up.fill"
-        case "DVD": return "opticaldiscdrive"
-        case "AUX1", "AUX2": return "cable.connector"
-        case "TUNER": return "radio.fill"
-        case "BT": return "bluetooth"
-        case "USB/IPOD": return "ipod"
-        case "NET": return "network"
-        case "SPOTIFY": return "music.note"
-        default: return "rectangle.fill"
+    private func apiAction(_ action: @escaping () async throws -> Void) {
+        Task {
+            do {
+                try await action()
+            } catch {
+                api.errorMessage = error.localizedDescription
+                showingError = true
+            }
         }
     }
 
     private func playHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
         UIImpactFeedbackGenerator(style: style).impactOccurred()
-    }
-
-    /// Converts raw tone value (44–56) to a dB label relative to center (50 = 0 dB).
-    private func toneLabel(_ value: Int) -> String {
-        let db = value - 50
-        if db > 0 { return "+\(db) dB" }
-        if db < 0 { return "\(db) dB" }
-        return "0 dB"
     }
 }
 
