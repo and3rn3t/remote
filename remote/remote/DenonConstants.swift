@@ -17,6 +17,16 @@ enum DenonConstants {
     static let maxLogEntries = 500
     static let volumeDebounceMilliseconds = 150
 
+    // Command timing (milliseconds)
+    static let commandThrottleMilliseconds = 50
+    static let postCommandDelayMilliseconds = 100
+    static let postStepDelayMilliseconds = 200
+    static let queryResponseDelayMilliseconds = 300
+    static let bulkQueryResponseDelayMilliseconds = 500
+    static let widgetUpdateCoalesceMilliseconds = 200
+    static let connectionPollIntervalMilliseconds = 100
+    static let connectionMonitorIntervalSeconds = 10
+
     // Tone: raw protocol values 44–56, center = 50 = 0 dB
     static let toneMin = 44
     static let toneMax = 56

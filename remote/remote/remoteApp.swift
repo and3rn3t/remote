@@ -24,7 +24,9 @@ struct remoteApp: App {
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // Fall back to in-memory store so the app remains usable
+            let fallback = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            return try! ModelContainer(for: schema, configurations: [fallback])
         }
     }()
 

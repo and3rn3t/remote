@@ -28,6 +28,9 @@ struct ZoneControlView: View {
             inputSelection
             refreshButton
         }
+        .onDisappear {
+            volumeDebounceTask?.cancel()
+        }
     }
 
     // MARK: - Power

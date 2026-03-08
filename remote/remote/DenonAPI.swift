@@ -145,7 +145,7 @@ final class DenonAPI {
                 logger.log("Connection refused — stream error", category: .error)
                 throw DenonError.connectionRefused
             }
-            try await Task.sleep(for: .milliseconds(100))
+            try await Task.sleep(for: .milliseconds(DenonConstants.connectionPollIntervalMilliseconds))
         }
 
         // Check if connection succeeded
@@ -189,7 +189,7 @@ final class DenonAPI {
         connectionMonitorTask?.cancel()
         connectionMonitorTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(10))
+                try? await Task.sleep(for: .seconds(DenonConstants.connectionMonitorIntervalSeconds))
                 guard !Task.isCancelled else { return }
 
                 guard let self else { return }
@@ -257,7 +257,7 @@ final class DenonAPI {
         // Throttle: ensure minimum interval between commands
         if let last = lastCommandTime {
             let elapsed = ContinuousClock.now - last
-            let minInterval = Duration.milliseconds(50)
+            let minInterval = Duration.milliseconds(DenonConstants.commandThrottleMilliseconds)
             if elapsed < minInterval {
                 try await Task.sleep(for: minInterval - elapsed)
             }
@@ -276,7 +276,7 @@ final class DenonAPI {
         lastCommandTime = .now
 
         // Brief delay to allow receiver to process
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(DenonConstants.postCommandDelayMilliseconds))
     }
 
     // MARK: - State Queries
@@ -294,7 +294,7 @@ final class DenonAPI {
         try await sendCommand("PSDYNEQ ?")
 
         // Read responses
-        try await Task.sleep(for: .milliseconds(500))
+        try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
         readResponses()
     }
 
@@ -317,7 +317,7 @@ final class DenonAPI {
     private func scheduleCoalescedUpdate() {
         updateCoalesceTask?.cancel()
         updateCoalesceTask = Task {
-            try? await Task.sleep(for: .milliseconds(200))
+            try? await Task.sleep(for: .milliseconds(DenonConstants.widgetUpdateCoalesceMilliseconds))
             guard !Task.isCancelled else { return }
             updateWidgetStatus()
             updateLiveActivity()
@@ -508,17 +508,17 @@ final class DenonAPI {
 
     func volumeUp() async throws {
         try await sendCommand("MVUP")
-        try await Task.sleep(for: .milliseconds(200))
+        try await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
         try await sendCommand("MV?")
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(DenonConstants.postCommandDelayMilliseconds))
         readResponses()
     }
 
     func volumeDown() async throws {
         try await sendCommand("MVDOWN")
-        try await Task.sleep(for: .milliseconds(200))
+        try await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
         try await sendCommand("MV?")
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(DenonConstants.postCommandDelayMilliseconds))
         readResponses()
     }
 
@@ -544,7 +544,7 @@ final class DenonAPI {
 
     func querySurroundMode() async throws {
         try await sendCommand("MS?")
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .milliseconds(DenonConstants.queryResponseDelayMilliseconds))
         readResponses()
     }
 
@@ -564,9 +564,9 @@ final class DenonAPI {
 
     private func zoneVolumeStep(_ direction: String, prefix: String, query: String) async throws {
         try await sendCommand("\(prefix)\(direction)")
-        try await Task.sleep(for: .milliseconds(200))
+        try await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
         try await sendCommand(query)
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(DenonConstants.postCommandDelayMilliseconds))
         readResponses()
     }
 
@@ -583,7 +583,7 @@ final class DenonAPI {
     private func refreshZoneState(prefix: String) async throws {
         try await sendCommand("\(prefix)?")
         try await sendCommand("\(prefix)MU?")
-        try await Task.sleep(for: .milliseconds(500))
+        try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
         readResponses()
     }
 
@@ -651,7 +651,7 @@ final class DenonAPI {
 
     func refreshNowPlaying() async throws {
         try await sendCommand("NSE")
-        try await Task.sleep(for: .milliseconds(500))
+        try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
         readResponses()
     }
 
@@ -668,7 +668,7 @@ final class DenonAPI {
 
     func querySleepTimer() async throws {
         try await sendCommand("SLP?")
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .milliseconds(DenonConstants.queryResponseDelayMilliseconds))
         readResponses()
     }
 
@@ -691,7 +691,7 @@ final class DenonAPI {
     func queryToneControls() async throws {
         try await sendCommand("PSBAS ?")
         try await sendCommand("PSTRE ?")
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .milliseconds(DenonConstants.queryResponseDelayMilliseconds))
         readResponses()
     }
 
@@ -710,7 +710,7 @@ final class DenonAPI {
     func queryDynamicSettings() async throws {
         try await sendCommand("PSDYNVOL ?")
         try await sendCommand("PSDYNEQ ?")
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .milliseconds(DenonConstants.queryResponseDelayMilliseconds))
         readResponses()
     }
 
@@ -734,7 +734,7 @@ final class DenonAPI {
     func queryReceiverInfo() async throws {
         try await sendCommand("SSINFAISMD ?")
         try await sendCommand("SSINFAISFSV ?")
-        try await Task.sleep(for: .milliseconds(500))
+        try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
         readResponses()
     }
 

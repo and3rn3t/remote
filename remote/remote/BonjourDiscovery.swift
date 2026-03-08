@@ -22,7 +22,7 @@ struct DiscoveredReceiver: Identifiable, Hashable {
 /// Denon receivers advertise HTTP services that can be discovered via `_http._tcp`.
 /// Some models also advertise a Denon-specific `_denon._tcp` service.
 /// We try the Denon-specific service first, then fall back to HTTP scanning.
-@Observable
+@MainActor @Observable
 final class BonjourDiscovery {
     var discoveredReceivers: [DiscoveredReceiver] = []
     var isScanning = false
@@ -89,14 +89,16 @@ final class BonjourDiscovery {
 
     // MARK: - Private
 
-    private func configureBrowser(_ browser: NWBrowser?) {
+    private nonisolated func configureBrowser(_ browser: NWBrowser?) {
         guard let browser else { return }
 
         browser.stateUpdateHandler = { [weak self] state in
             switch state {
             case .failed(let error):
-                self?.errorMessage = "Network scan failed: \(error.localizedDescription)"
-                self?.isScanning = false
+                Task { @MainActor in
+                    self?.errorMessage = "Network scan failed: \(error.localizedDescription)"
+                    self?.isScanning = false
+                }
             case .cancelled:
                 break
             default:
@@ -112,7 +114,7 @@ final class BonjourDiscovery {
         }
     }
 
-    private func resolveResult(_ result: NWBrowser.Result) {
+    private nonisolated func resolveResult(_ result: NWBrowser.Result) {
         // Filter for likely Denon devices by name
         guard case .service(let name, let type, _, _) = result.endpoint else { return }
 
@@ -140,15 +142,17 @@ final class BonjourDiscovery {
                     let hostStr = "\(host)"
                     let portInt = Int(port.rawValue)
 
-                    // Deduplicate by host
-                    if !self.resolvedHosts.contains(hostStr) {
-                        self.resolvedHosts.insert(hostStr)
-                        let receiver = DiscoveredReceiver(
-                            name: name,
-                            host: hostStr,
-                            port: portInt
-                        )
-                        self.discoveredReceivers.append(receiver)
+                    Task { @MainActor in
+                        // Deduplicate by host
+                        if !self.resolvedHosts.contains(hostStr) {
+                            self.resolvedHosts.insert(hostStr)
+                            let receiver = DiscoveredReceiver(
+                                name: name,
+                                host: hostStr,
+                                port: portInt
+                            )
+                            self.discoveredReceivers.append(receiver)
+                        }
                     }
                 }
                 connection.cancel()

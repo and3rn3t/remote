@@ -43,6 +43,7 @@ struct ReceiverControlView: View {
             }
         }
         .onDisappear {
+            volumeDebounceTask?.cancel()
             api.disconnect()
         }
         .sheet(isPresented: $showingSettings) {

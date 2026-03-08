@@ -6,6 +6,7 @@
 import AppIntents
 import Network
 import WidgetKit
+import os
 
 struct TogglePowerIntent: AppIntent {
     static var title: LocalizedStringResource = "Toggle Receiver Power"
@@ -75,13 +76,13 @@ enum DenonCommandSender {
 
 /// Ensures a continuation is only resumed once, even with multiple callbacks.
 private final class ContinuationGuard: Sendable {
-    nonisolated(unsafe) private let lock = NSLock()
-    nonisolated(unsafe) private var resumed = false
-    nonisolated func resumeOnce(_ action: () -> Void) {
-        lock.lock()
-        defer { lock.unlock() }
-        guard !resumed else { return }
-        resumed = true
-        action()
+    private let lock = OSAllocatedUnfairLock(initialState: false)
+    func resumeOnce(_ action: () -> Void) {
+        let shouldResume = lock.withLock { alreadyResumed -> Bool in
+            guard !alreadyResumed else { return false }
+            alreadyResumed = true
+            return true
+        }
+        if shouldResume { action() }
     }
 }

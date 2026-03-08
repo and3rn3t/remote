@@ -34,8 +34,12 @@ struct ReceiverEntityQuery: EntityQuery {
         try allReceivers()
     }
 
+    private static let sharedContainer: ModelContainer? = {
+        try? ModelContainer(for: DenonReceiver.self)
+    }()
+
     private func allReceivers() throws -> [ReceiverEntity] {
-        let container = try ModelContainer(for: DenonReceiver.self)
+        guard let container = Self.sharedContainer else { return [] }
         let context = ModelContext(container)
         let receivers = try context.fetch(FetchDescriptor<DenonReceiver>())
         return receivers.map {
