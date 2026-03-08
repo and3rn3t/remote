@@ -38,4 +38,16 @@ struct ReceiverStatus: Codable {
         currentInput: "—",
         lastUpdated: .now
     )
+
+    /// Human-readable display name for a Denon input code.
+    static func inputDisplayName(_ code: String) -> String {
+        let mapping: [String: String] = [
+            "BD": "Blu-ray", "GAME": "Game", "MPLAY": "Media Player",
+            "TV": "TV Audio", "SAT/CBL": "Cable/Sat", "DVD": "DVD",
+            "AUX1": "AUX1", "AUX2": "AUX2", "TUNER": "Tuner",
+            "BT": "Bluetooth", "USB/IPOD": "USB/iPod", "NET": "Network",
+            "SPOTIFY": "Spotify",
+        ]
+        return mapping[code] ?? code
+    }
 }

@@ -118,14 +118,7 @@ struct MediumReceiverWidgetView: View {
     }
 
     private func inputDisplayName(_ code: String) -> String {
-        let mapping: [String: String] = [
-            "BD": "Blu-ray", "GAME": "Game", "MPLAY": "Media Player",
-            "TV": "TV Audio", "SAT/CBL": "Cable/Sat", "DVD": "DVD",
-            "AUX1": "AUX1", "AUX2": "AUX2", "TUNER": "Tuner",
-            "BT": "Bluetooth", "USB/IPOD": "USB/iPod", "NET": "Network",
-            "SPOTIFY": "Spotify",
-        ]
-        return mapping[code] ?? code
+        ReceiverStatus.inputDisplayName(code)
     }
 }
 

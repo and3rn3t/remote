@@ -7,9 +7,6 @@
 
 import SwiftUI
 import SwiftData
-#if canImport(UIKit)
-import UIKit
-#endif
 
 struct ReceiverControlView: View {
     @Environment(\.modelContext) private var modelContext
@@ -111,9 +108,9 @@ struct ReceiverControlView: View {
                 scenesSection
                 quickActions
             } else if selectedZone == 1 {
-                ZoneControlView(zone: 2, receiver: receiver, api: api, showingError: $showingError)
+                ZoneControlView(zone: .zone2, receiver: receiver, api: api, showingError: $showingError)
             } else {
-                ZoneControlView(zone: 3, receiver: receiver, api: api, showingError: $showingError)
+                ZoneControlView(zone: .zone3, receiver: receiver, api: api, showingError: $showingError)
             }
         }
         .animation(.smooth, value: selectedZone)
@@ -254,39 +251,8 @@ struct ReceiverControlView: View {
             }
             .padding(.horizontal, 4)
 
-            GlassEffectContainer(spacing: 12.0) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
-                    ForEach(DenonInputs.all, id: \.code) { input in
-                        Button {
-                            playHaptic(.light)
-                            apiAction { try await api.setInput(input.code) }
-                        } label: {
-                            VStack(spacing: 8) {
-                                Image(systemName: DenonInputs.icon(for: input.code))
-                                    .font(.title2)
-                                    .foregroundStyle(api.state.currentInput == input.code ? .white : .primary)
-
-                                Text(input.name)
-                                    .font(.caption)
-                                    .foregroundStyle(api.state.currentInput == input.code ? .white : .primary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                        }
-                        .buttonStyle(.plain)
-                        .glassEffect(
-                            api.state.currentInput == input.code ?
-                                .regular.tint(.purple).interactive() :
-                                .regular.interactive(),
-                            in: .rect(cornerRadius: 12)
-                        )
-                        .accessibilityLabel(input.name)
-                        .accessibilityValue(api.state.currentInput == input.code ? "Selected" : "")
-                        .accessibilityAddTraits(api.state.currentInput == input.code ? .isSelected : [])
-                    }
-                }
+            InputSelectionGrid(currentInput: api.state.currentInput) { code in
+                apiAction { try await api.setInput(code) }
             }
         }
     }
@@ -668,13 +634,6 @@ struct ReceiverControlView: View {
         }
     }
 
-    #if canImport(UIKit)
-    private func playHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
-        UIImpactFeedbackGenerator(style: style).impactOccurred()
-    }
-    #else
-    private func playHaptic(_ style: Any? = nil) {}
-    #endif
 }
 
 #Preview {

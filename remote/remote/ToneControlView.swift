@@ -4,9 +4,6 @@
 //
 
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 /// Extracted Tone Controls section from ReceiverControlView.
 struct ToneControlView: View {

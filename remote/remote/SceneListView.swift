@@ -97,24 +97,24 @@ struct SceneListView: View {
 
                 // Zone 2
                 if let input = scene.zone2InputCode {
-                    try await api.setZone2Input(input)
+                    try await api.setZoneInput(input, zone: .zone2)
                 }
                 if let vol = scene.zone2Volume {
-                    try await api.setZone2Volume(vol)
+                    try await api.setZoneVolume(vol, zone: .zone2)
                 }
                 if let muted = scene.zone2IsMuted {
-                    try await api.setZone2Mute(muted)
+                    try await api.setZoneMute(muted, zone: .zone2)
                 }
 
                 // Zone 3
                 if let input = scene.zone3InputCode {
-                    try await api.setZone3Input(input)
+                    try await api.setZoneInput(input, zone: .zone3)
                 }
                 if let vol = scene.zone3Volume {
-                    try await api.setZone3Volume(vol)
+                    try await api.setZoneVolume(vol, zone: .zone3)
                 }
                 if let muted = scene.zone3IsMuted {
-                    try await api.setZone3Mute(muted)
+                    try await api.setZoneMute(muted, zone: .zone3)
                 }
             } catch {
                 api.errorMessage = error.localizedDescription

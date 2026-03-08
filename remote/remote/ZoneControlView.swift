@@ -4,13 +4,10 @@
 //
 
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 /// Reusable control view for Zone 2 or Zone 3.
 struct ZoneControlView: View {
-    let zone: Int  // 2 or 3
+    let zone: DenonAPI.Zone
     let receiver: DenonReceiver
     let api: DenonAPI
     @Binding var showingError: Bool
@@ -18,7 +15,11 @@ struct ZoneControlView: View {
     @State private var volumeDebounceTask: Task<Void, Never>?
 
     private var zoneState: ZoneState {
-        zone == 2 ? api.state.zone2 : api.state.zone3
+        api.state[keyPath: zone.keyPath]
+    }
+
+    private var zoneNumber: Int {
+        zone == .zone2 ? 2 : 3
     }
 
     var body: some View {
@@ -52,7 +53,7 @@ struct ZoneControlView: View {
                         get: { zoneState.isPowerOn },
                         set: { newValue in
                             playHaptic()
-                            apiAction { try await self.setPower(newValue) }
+                            apiAction { try await api.setZonePower(newValue, zone: zone) }
                         }
                     ))
                     .labelsHidden()
@@ -96,7 +97,7 @@ struct ZoneControlView: View {
                                     try? await Task.sleep(for: .milliseconds(DenonConstants.volumeDebounceMilliseconds))
                                     guard !Task.isCancelled else { return }
                                     do {
-                                        try await self.setVolume(target)
+                                        try await api.setZoneVolume(target, zone: zone)
                                     } catch {
                                         api.errorMessage = error.localizedDescription
                                         showingError = true
@@ -107,14 +108,14 @@ struct ZoneControlView: View {
                         in: 0...Double(receiver.volumeLimit)
                     )
                     .tint(Double(zoneState.volume) > Double(receiver.volumeLimit) * 0.9 ? .red : .blue)
-                    .accessibilityLabel("Zone \(zone) Volume")
+                    .accessibilityLabel("Zone \(zoneNumber) Volume")
                     .accessibilityValue("\(zoneState.volume) decibels")
                     .accessibilityHint("Adjusts volume from 0 to \(receiver.volumeLimit)")
 
                     HStack(spacing: 16) {
                         Button {
                             playHaptic(.light)
-                            apiAction { try await self.volumeDown() }
+                            apiAction { try await api.zoneVolumeDown(zone) }
                         } label: {
                             Label("Volume Down", systemImage: "minus.circle.fill")
                                 .labelStyle(.iconOnly)
@@ -122,11 +123,11 @@ struct ZoneControlView: View {
                         }
                         .buttonStyle(.glass)
                         .glassEffect(.regular.interactive(), in: .circle)
-                        .accessibilityLabel("Zone \(zone) Volume Down")
+                        .accessibilityLabel("Zone \(zoneNumber) Volume Down")
 
                         Button {
                             playHaptic(.light)
-                            apiAction { try await self.setMute(!self.zoneState.isMuted) }
+                            apiAction { try await api.setZoneMute(!zoneState.isMuted, zone: zone) }
                         } label: {
                             Label("Mute", systemImage: zoneState.isMuted ? "speaker.slash.fill" : "speaker.fill")
                                 .labelStyle(.iconOnly)
@@ -134,11 +135,11 @@ struct ZoneControlView: View {
                         }
                         .buttonStyle(.glassProminent)
                         .glassEffect(.regular.tint(zoneState.isMuted ? .red : .blue).interactive(), in: .rect(cornerRadius: 12))
-                        .accessibilityLabel(zoneState.isMuted ? "Zone \(zone) Unmute" : "Zone \(zone) Mute")
+                        .accessibilityLabel(zoneState.isMuted ? "Zone \(zoneNumber) Unmute" : "Zone \(zoneNumber) Mute")
 
                         Button {
                             playHaptic(.light)
-                            apiAction { try await self.volumeUp() }
+                            apiAction { try await api.zoneVolumeUp(zone) }
                         } label: {
                             Label("Volume Up", systemImage: "plus.circle.fill")
                                 .labelStyle(.iconOnly)
@@ -146,7 +147,7 @@ struct ZoneControlView: View {
                         }
                         .buttonStyle(.glass)
                         .glassEffect(.regular.interactive(), in: .circle)
-                        .accessibilityLabel("Zone \(zone) Volume Up")
+                        .accessibilityLabel("Zone \(zoneNumber) Volume Up")
                     }
                 }
             }
@@ -164,43 +165,13 @@ struct ZoneControlView: View {
                     .font(.title3)
                     .foregroundStyle(.purple)
 
-                Text("Zone \(zone) Input")
+                Text("Zone \(zoneNumber) Input")
                     .font(.headline)
             }
             .padding(.horizontal, 4)
 
-            GlassEffectContainer(spacing: 12.0) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
-                    ForEach(DenonInputs.all, id: \.code) { input in
-                        Button {
-                            playHaptic(.light)
-                            apiAction { try await self.setInput(input.code) }
-                        } label: {
-                            VStack(spacing: 8) {
-                                Image(systemName: DenonInputs.icon(for: input.code))
-                                    .font(.title2)
-                                    .foregroundStyle(zoneState.currentInput == input.code ? .white : .primary)
-
-                                Text(input.name)
-                                    .font(.caption)
-                                    .foregroundStyle(zoneState.currentInput == input.code ? .white : .primary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                        }
-                        .buttonStyle(.plain)
-                        .glassEffect(
-                            zoneState.currentInput == input.code ?
-                                .regular.tint(.purple).interactive() :
-                                .regular.interactive(),
-                            in: .rect(cornerRadius: 12)
-                        )
-                        .accessibilityLabel(input.name)
-                        .accessibilityValue(zoneState.currentInput == input.code ? "Selected" : "")
-                    }
-                }
+            InputSelectionGrid(currentInput: zoneState.currentInput) { code in
+                apiAction { try await api.setZoneInput(code, zone: zone) }
             }
         }
     }
@@ -211,12 +182,12 @@ struct ZoneControlView: View {
         GlassEffectContainer(spacing: 12.0) {
             Button {
                 playHaptic(.light)
-                apiAction { try await self.refreshState() }
+                apiAction { try await api.refreshZoneState(zone) }
             } label: {
                 VStack(spacing: 8) {
                     Image(systemName: "arrow.clockwise")
                         .font(.title2)
-                    Text("Refresh Zone \(zone)")
+                    Text("Refresh Zone \(zoneNumber)")
                         .font(.caption)
                 }
                 .frame(maxWidth: .infinity)
@@ -224,45 +195,8 @@ struct ZoneControlView: View {
             }
             .buttonStyle(.glass)
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
-            .accessibilityLabel("Refresh Zone \(zone) state")
+            .accessibilityLabel("Refresh Zone \(zoneNumber) state")
         }
-    }
-
-    // MARK: - Zone-Specific Methods
-
-    private func setPower(_ on: Bool) async throws {
-        if zone == 2 { try await api.setZone2Power(on) }
-        else { try await api.setZone3Power(on) }
-    }
-
-    private func setVolume(_ volume: Int) async throws {
-        if zone == 2 { try await api.setZone2Volume(volume) }
-        else { try await api.setZone3Volume(volume) }
-    }
-
-    private func volumeUp() async throws {
-        if zone == 2 { try await api.zone2VolumeUp() }
-        else { try await api.zone3VolumeUp() }
-    }
-
-    private func volumeDown() async throws {
-        if zone == 2 { try await api.zone2VolumeDown() }
-        else { try await api.zone3VolumeDown() }
-    }
-
-    private func setMute(_ muted: Bool) async throws {
-        if zone == 2 { try await api.setZone2Mute(muted) }
-        else { try await api.setZone3Mute(muted) }
-    }
-
-    private func setInput(_ input: String) async throws {
-        if zone == 2 { try await api.setZone2Input(input) }
-        else { try await api.setZone3Input(input) }
-    }
-
-    private func refreshState() async throws {
-        if zone == 2 { try await api.refreshZone2State() }
-        else { try await api.refreshZone3State() }
     }
 
     // MARK: - Helpers
@@ -275,12 +209,4 @@ struct ZoneControlView: View {
             }
         }
     }
-
-    #if canImport(UIKit)
-    private func playHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
-        UIImpactFeedbackGenerator(style: style).impactOccurred()
-    }
-    #else
-    private func playHaptic(_ style: Any? = nil) {}
-    #endif
 }

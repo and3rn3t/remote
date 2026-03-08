@@ -4,9 +4,6 @@
 //
 
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 /// Extracted Now Playing section from ReceiverControlView.
 struct NowPlayingView: View {
@@ -93,9 +90,7 @@ struct NowPlayingView: View {
 
     private func transportButton(systemImage: String, label: String, action: @escaping () async throws -> Void) -> some View {
         Button {
-            #if canImport(UIKit)
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            #endif
+            playHaptic(.light)
             apiAction(action)
         } label: {
             Image(systemName: systemImage)

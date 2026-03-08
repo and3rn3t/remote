@@ -4,9 +4,6 @@
 //
 
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 /// Extracted Dynamic Audio settings section from ReceiverControlView.
 struct DynamicSettingsView: View {
@@ -97,11 +94,4 @@ struct DynamicSettingsView: View {
         }
     }
 
-    #if canImport(UIKit)
-    private func playHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
-        UIImpactFeedbackGenerator(style: style).impactOccurred()
-    }
-    #else
-    private func playHaptic(_ style: Any? = nil) {}
-    #endif
 }

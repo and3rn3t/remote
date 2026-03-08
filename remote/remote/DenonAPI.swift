@@ -548,103 +548,70 @@ final class DenonAPI {
         readResponses()
     }
 
-    // MARK: - Generic Zone Controls
+    // MARK: - Zone Controls
 
-    private func setZonePower(_ on: Bool, prefix: String, zone: WritableKeyPath<DenonState, ZoneState>) async throws {
-        try await sendCommand(on ? "\(prefix)ON" : "\(prefix)OFF")
-        state[keyPath: zone].isPowerOn = on
+    /// Identifies a secondary zone for zone-specific commands.
+    enum Zone {
+        case zone2, zone3
+
+        var prefix: String {
+            switch self {
+            case .zone2: "Z2"
+            case .zone3: "Z3"
+            }
+        }
+
+        var keyPath: WritableKeyPath<DenonState, ZoneState> {
+            switch self {
+            case .zone2: \.zone2
+            case .zone3: \.zone3
+            }
+        }
     }
 
-    private func setZoneVolume(_ volume: Int, prefix: String, zone: WritableKeyPath<DenonState, ZoneState>) async throws {
+    func setZonePower(_ on: Bool, zone: Zone) async throws {
+        try await sendCommand(on ? "\(zone.prefix)ON" : "\(zone.prefix)OFF")
+        state[keyPath: zone.keyPath].isPowerOn = on
+    }
+
+    func setZoneVolume(_ volume: Int, zone: Zone) async throws {
         let clamped = min(max(volume, 0), DenonConstants.maxVolume)
         let volumeString = String(format: "%02d", clamped)
-        try await sendCommand("\(prefix)\(volumeString)")
-        state[keyPath: zone].volume = clamped
+        try await sendCommand("\(zone.prefix)\(volumeString)")
+        state[keyPath: zone.keyPath].volume = clamped
     }
 
-    private func zoneVolumeStep(_ direction: String, prefix: String, query: String) async throws {
-        try await sendCommand("\(prefix)\(direction)")
-        try await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
-        try await sendCommand(query)
-        try await Task.sleep(for: .milliseconds(DenonConstants.postCommandDelayMilliseconds))
-        readResponses()
+    func zoneVolumeUp(_ zone: Zone) async throws {
+        try await zoneVolumeStep("UP", prefix: zone.prefix)
     }
 
-    private func setZoneMute(_ muted: Bool, prefix: String, zone: WritableKeyPath<DenonState, ZoneState>) async throws {
-        try await sendCommand(muted ? "\(prefix)MUON" : "\(prefix)MUOFF")
-        state[keyPath: zone].isMuted = muted
+    func zoneVolumeDown(_ zone: Zone) async throws {
+        try await zoneVolumeStep("DOWN", prefix: zone.prefix)
     }
 
-    private func setZoneInput(_ input: String, prefix: String, zone: WritableKeyPath<DenonState, ZoneState>) async throws {
-        try await sendCommand("\(prefix)\(input)")
-        state[keyPath: zone].currentInput = input
+    func setZoneMute(_ muted: Bool, zone: Zone) async throws {
+        try await sendCommand(muted ? "\(zone.prefix)MUON" : "\(zone.prefix)MUOFF")
+        state[keyPath: zone.keyPath].isMuted = muted
     }
 
-    private func refreshZoneState(prefix: String) async throws {
-        try await sendCommand("\(prefix)?")
-        try await sendCommand("\(prefix)MU?")
+    func setZoneInput(_ input: String, zone: Zone) async throws {
+        try await sendCommand("\(zone.prefix)\(input)")
+        state[keyPath: zone.keyPath].currentInput = input
+    }
+
+    func refreshZoneState(_ zone: Zone) async throws {
+        try await sendCommand("\(zone.prefix)?")
+        try await sendCommand("\(zone.prefix)MU?")
         try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
         readResponses()
     }
 
-    // MARK: - Zone 2 Controls
-
-    func setZone2Power(_ on: Bool) async throws {
-        try await setZonePower(on, prefix: "Z2", zone: \.zone2)
-    }
-
-    func setZone2Volume(_ volume: Int) async throws {
-        try await setZoneVolume(volume, prefix: "Z2", zone: \.zone2)
-    }
-
-    func zone2VolumeUp() async throws {
-        try await zoneVolumeStep("UP", prefix: "Z2", query: "Z2?")
-    }
-
-    func zone2VolumeDown() async throws {
-        try await zoneVolumeStep("DOWN", prefix: "Z2", query: "Z2?")
-    }
-
-    func setZone2Mute(_ muted: Bool) async throws {
-        try await setZoneMute(muted, prefix: "Z2", zone: \.zone2)
-    }
-
-    func setZone2Input(_ input: String) async throws {
-        try await setZoneInput(input, prefix: "Z2", zone: \.zone2)
-    }
-
-    func refreshZone2State() async throws {
-        try await refreshZoneState(prefix: "Z2")
-    }
-
-    // MARK: - Zone 3 Controls
-
-    func setZone3Power(_ on: Bool) async throws {
-        try await setZonePower(on, prefix: "Z3", zone: \.zone3)
-    }
-
-    func setZone3Volume(_ volume: Int) async throws {
-        try await setZoneVolume(volume, prefix: "Z3", zone: \.zone3)
-    }
-
-    func zone3VolumeUp() async throws {
-        try await zoneVolumeStep("UP", prefix: "Z3", query: "Z3?")
-    }
-
-    func zone3VolumeDown() async throws {
-        try await zoneVolumeStep("DOWN", prefix: "Z3", query: "Z3?")
-    }
-
-    func setZone3Mute(_ muted: Bool) async throws {
-        try await setZoneMute(muted, prefix: "Z3", zone: \.zone3)
-    }
-
-    func setZone3Input(_ input: String) async throws {
-        try await setZoneInput(input, prefix: "Z3", zone: \.zone3)
-    }
-
-    func refreshZone3State() async throws {
-        try await refreshZoneState(prefix: "Z3")
+    private func zoneVolumeStep(_ direction: String, prefix: String) async throws {
+        try await sendCommand("\(prefix)\(direction)")
+        try await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
+        try await sendCommand("\(prefix)?")
+        try await Task.sleep(for: .milliseconds(DenonConstants.postCommandDelayMilliseconds))
+        readResponses()
     }
 
     // MARK: - Now Playing
