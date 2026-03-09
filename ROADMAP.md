@@ -48,8 +48,8 @@ Make the app reliable enough for daily use.
 
 - [x] VoiceOver labels on all Liquid Glass buttons and controls
 - [x] Volume slider accessibility value descriptions ("Volume: 45 dB")
-- [ ] Dynamic Type support verification
-- [ ] Reduce transparency support for glass effects
+- [x] Dynamic Type support verification — `AccessibilitySupport.swift` with adaptive components
+- [x] Reduce transparency support for glass effects — `adaptiveGlassEffect()` modifier with solid fallback
 
 ---
 
