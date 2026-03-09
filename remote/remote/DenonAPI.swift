@@ -11,64 +11,147 @@ import SharedModels
 import WidgetKit
 import ActivityKit
 
-/// State for a single zone (Main, Zone 2, or Zone 3)
+/// State for a single zone (Main, Zone 2, or Zone 3).
+///
+/// Tracks the power, volume, mute, and input state for an individual audio zone.
+/// Denon receivers support up to three zones with independent control.
 struct ZoneState {
+    /// Whether the zone is powered on.
     var isPowerOn: Bool = false
-    var volume: Int = 0  // Range: 0-98
+    
+    /// Volume level for this zone (0-98, representing 0.0 to 98.0 dB).
+    var volume: Int = 0
+    
+    /// Whether the zone audio is muted.
     var isMuted: Bool = false
+    
+    /// Current input source code (e.g., "BD", "GAME", "TV").
     var currentInput: String = "Unknown"
 }
 
-/// Now Playing information from network sources
+/// Now Playing information from network sources.
+///
+/// Tracks metadata for currently playing media on network-connected sources
+/// (Spotify, Bluetooth, USB, NET, Media Player). The receiver provides up to
+/// four lines of text (NSE1-NSE4) which typically contain artist, album, track, and extra info.
 struct NowPlayingInfo {
-    var line1: String = ""  // NSE1 — e.g. artist
-    var line2: String = ""  // NSE2 — e.g. album
-    var line3: String = ""  // NSE3 — e.g. track name
-    var line4: String = ""  // NSE4 — extra info
+    /// First line of metadata (typically artist name).
+    var line1: String = ""
+    
+    /// Second line of metadata (typically album name).
+    var line2: String = ""
+    
+    /// Third line of metadata (typically track title).
+    var line3: String = ""
+    
+    /// Fourth line of metadata (extra info, format, etc.).
+    var line4: String = ""
 
+    /// Returns `true` if all metadata lines are empty.
     var isEmpty: Bool {
         line1.isEmpty && line2.isEmpty && line3.isEmpty && line4.isEmpty
     }
 }
 
-/// Represents the current state of the Denon AVR
+/// Represents the complete current state of the Denon AVR.
+///
+/// This structure holds all observable state for the receiver including:
+/// - Main zone power, volume, input, and surround mode
+/// - Zone 2 and Zone 3 states
+/// - Now Playing metadata
+/// - Tone controls and dynamic audio settings
+/// - Sleep timer status
+/// - Receiver hardware info
 struct DenonState {
+    /// Whether the main zone is powered on.
     var isPowerOn: Bool = false
-    var volume: Int = 0  // Range: 0-98 (0.0 to 98.0 dB)
+    
+    /// Main zone volume (0-98, representing 0.0 to 98.0 dB).
+    var volume: Int = 0
+    
+    /// Whether the main zone is muted.
     var isMuted: Bool = false
+    
+    /// Current input source code (e.g., "BD", "GAME", "TV").
     var currentInput: String = "Unknown"
+    
+    /// Current surround sound mode (e.g., "STEREO", "DOLBY DIGITAL").
     var surroundMode: String = "Unknown"
 
-    // Zone 2/3
+    /// State for Zone 2 (secondary audio zone).
     var zone2 = ZoneState()
+    
+    /// State for Zone 3 (tertiary audio zone).
     var zone3 = ZoneState()
 
-    // Now Playing
+    /// Now Playing metadata from network sources.
     var nowPlaying = NowPlayingInfo()
 
-    // Sleep Timer (minutes remaining, nil = off)
+    /// Sleep timer remaining minutes (`nil` if timer is off).
     var sleepTimer: Int?
 
-    // Tone/EQ (raw protocol values: 44–56, where 50 = 0 dB)
+    /// Bass control (44-56, where 50 = 0 dB, ±6 dB range).
     var bass: Int = 50
+    
+    /// Treble control (44-56, where 50 = 0 dB, ±6 dB range).
     var treble: Int = 50
 
-    // Dynamic Volume (OFF, LIT, MED, HEV)
+    /// Dynamic Volume mode: "OFF", "LIT", "MED", or "HEV".
     var dynamicVolume: String = "OFF"
+    
+    /// Whether Dynamic EQ is enabled.
     var dynamicEQ: Bool = false
 
-    // Receiver Info
+    /// Receiver model name (if queried).
     var receiverModel: String = ""
+    
+    /// Receiver firmware version (if queried).
     var firmwareVersion: String = ""
 }
 
-/// Manages communication with Denon AVR via the network API
+/// Manages communication with Denon AVR via the network API.
+///
+/// `DenonAPI` is the core TCP client that handles:
+/// - Connection establishment and automatic reconnection
+/// - Command sending with throttling (50ms minimum between commands)
+/// - Asynchronous response parsing from the receiver's protocol stream
+/// - State updates via Swift Observation (`@Observable`)
+/// - Integration with widgets, Live Activities, and connection logging
+///
+/// ## Usage
+///
+/// ```swift
+/// let api = DenonAPI()
+/// try await api.connect(to: receiver)
+/// try await api.setPower(on: true)
+/// try await api.setVolume(45)
+/// ```
+///
+/// ## Thread Safety
+///
+/// This class must be used on the main actor. All public methods and properties
+/// are `@MainActor` isolated to ensure thread-safe UI updates.
+///
+/// ## Protocol Details
+///
+/// Commands are sent over TCP port 23 (telnet), terminated with `\r`.
+/// Responses arrive asynchronously and are parsed in a continuous stream.
+/// The receiver does not send explicit acknowledgments for all commands.
 @MainActor @Observable
 final class DenonAPI {
+    /// Current receiver state (power, volume, input, zones, etc.).
     var state = DenonState()
+    
+    /// Whether the TCP connection is active.
     var isConnected = false
+    
+    /// User-facing error message (nil if no error).
     var errorMessage: String?
+    
+    /// Whether the API is currently attempting to reconnect.
     var isReconnecting = false
+    
+    /// Current reconnection attempt number (for UI feedback).
     var currentReconnectAttempt = 0
 
     private var receiver: DenonReceiver?
@@ -82,7 +165,7 @@ final class DenonAPI {
     private var updateCoalesceTask: Task<Void, Never>?
     private var lastCommandTime: ContinuousClock.Instant?
 
-    /// Timeout for establishing a TCP connection, in seconds.
+    /// Timeout for establishing a TCP connection, in seconds (default: 5.0).
     var connectionTimeout: TimeInterval = DenonConstants.connectionTimeout
 
     // MARK: - Connection Management
