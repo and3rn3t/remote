@@ -2,6 +2,14 @@
 
 A modern iOS app for controlling Denon AV Receivers, built with iOS 26 design guidelines featuring Liquid Glass effects.
 
+## Screenshots
+
+| Receiver List | Control View | Now Playing | Zone Control | Settings |
+|---|---|---|---|---|
+| ![List](screenshots/list.png) | ![Control](screenshots/control.png) | ![Playing](screenshots/playing.png) | ![Zones](screenshots/zones.png) | ![Settings](screenshots/settings.png) |
+
+*Take screenshots using the iOS Simulator or a real device, then save them to the `screenshots/` directory.*
+
 ## Features
 
 ### 🎨 iOS 26 Design Compliance
