@@ -26,9 +26,10 @@ struct NowPlayingView: View {
                     apiAction { try await api.refreshNowPlaying() }
                 } label: {
                     Image(systemName: "arrow.clockwise")
-                        .font(.caption)
+                        .font(.body)
                 }
                 .buttonStyle(.plain)
+                .contentShape(.rect)
                 .accessibilityLabel("Refresh Now Playing")
             }
             .padding(.horizontal, 4)
@@ -62,23 +63,23 @@ struct NowPlayingView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    }
 
-                    HStack(spacing: 20) {
-                        transportButton(systemImage: "backward.fill", label: "Previous") {
-                            try await api.transportSkipPrevious()
-                        }
-                        transportButton(systemImage: "play.fill", label: "Play") {
-                            try await api.transportPlay()
-                        }
-                        transportButton(systemImage: "pause.fill", label: "Pause") {
-                            try await api.transportPause()
-                        }
-                        transportButton(systemImage: "stop.fill", label: "Stop") {
-                            try await api.transportStop()
-                        }
-                        transportButton(systemImage: "forward.fill", label: "Next") {
-                            try await api.transportSkipNext()
+                        HStack(spacing: 20) {
+                            transportButton(systemImage: "backward.fill", label: "Previous") {
+                                try await api.transportSkipPrevious()
+                            }
+                            transportButton(systemImage: "play.fill", label: "Play") {
+                                try await api.transportPlay()
+                            }
+                            transportButton(systemImage: "pause.fill", label: "Pause") {
+                                try await api.transportPause()
+                            }
+                            transportButton(systemImage: "stop.fill", label: "Stop") {
+                                try await api.transportStop()
+                            }
+                            transportButton(systemImage: "forward.fill", label: "Next") {
+                                try await api.transportSkipNext()
+                            }
                         }
                     }
                 }

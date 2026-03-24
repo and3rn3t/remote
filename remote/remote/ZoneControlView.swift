@@ -24,28 +24,27 @@ struct ZoneControlView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            powerControl
-            volumeControl
+            powerVolumeControl
             inputSelection
-            refreshButton
         }
         .onDisappear {
             volumeDebounceTask?.cancel()
         }
     }
 
-    // MARK: - Power
+    // MARK: - Power + Volume
 
-    private var powerControl: some View {
-        GlassEffectContainer(spacing: 20.0) {
+    private var powerVolumeControl: some View {
+        GlassEffectContainer(spacing: 0) {
             VStack(spacing: 16) {
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "power")
-                        .font(.title2)
+                        .font(.title3)
                         .foregroundStyle(zoneState.isPowerOn ? .green : .secondary)
 
-                    Text(zoneState.isPowerOn ? "Powered On" : "Standby")
-                        .font(.headline)
+                    Text(zoneState.isPowerOn ? "On" : "Standby")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
 
                     Spacer()
 
@@ -60,38 +59,31 @@ struct ZoneControlView: View {
                     .accessibilityLabel("Zone Power")
                     .accessibilityValue(zoneState.isPowerOn ? "On" : "Standby")
                 }
-            }
-            .padding(20)
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
-        }
-    }
 
-    // MARK: - Volume
-
-    private var volumeControl: some View {
-        GlassEffectContainer(spacing: 20.0) {
-            VStack(spacing: 20) {
-                HStack {
-                    Image(systemName: zoneState.isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
-                        .font(.title2)
-                        .foregroundStyle(zoneState.isMuted ? .red : .blue)
-
-                    Text("Volume")
-                        .font(.headline)
-
-                    Spacer()
-
-                    Text("\(zoneState.volume)")
-                        .font(.title2.bold())
-                        .foregroundStyle(.primary)
-                }
+                Divider()
 
                 VStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: zoneState.isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
+                            .font(.title2)
+                            .foregroundStyle(zoneState.isMuted ? .red : .blue)
+
+                        Text("Volume")
+                            .font(.headline)
+
+                        Spacer()
+
+                        Text("\(zoneState.volume)")
+                            .font(.title2.bold())
+                            .foregroundStyle(.primary)
+                    }
+
                     Slider(
                         value: Binding(
                             get: { Double(zoneState.volume) },
                             set: { newValue in
                                 let target = Int(newValue)
+                                api.state[keyPath: zone.keyPath].volume = target
                                 volumeDebounceTask?.cancel()
                                 volumeDebounceTask = Task {
                                     try? await Task.sleep(for: .milliseconds(DenonConstants.volumeDebounceMilliseconds))
@@ -152,7 +144,7 @@ struct ZoneControlView: View {
                 }
             }
             .padding(20)
-            .glassEffect(.regular, in: .rect(cornerRadius: 16))
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
         }
     }
 
@@ -170,32 +162,9 @@ struct ZoneControlView: View {
             }
             .padding(.horizontal, 4)
 
-            InputSelectionGrid(currentInput: zoneState.currentInput) { code in
+            InputSelectionGrid(currentInput: zoneState.currentInput, aliases: api.state.inputAliases) { code in
                 apiAction { try await api.setZoneInput(code, zone: zone) }
             }
-        }
-    }
-
-    // MARK: - Refresh
-
-    private var refreshButton: some View {
-        GlassEffectContainer(spacing: 12.0) {
-            Button {
-                playHaptic(.light)
-                apiAction { try await api.refreshZoneState(zone) }
-            } label: {
-                VStack(spacing: 8) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.title2)
-                    Text("Refresh Zone \(zoneNumber)")
-                        .font(.caption)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-            }
-            .buttonStyle(.glass)
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
-            .accessibilityLabel("Refresh Zone \(zoneNumber) state")
         }
     }
 

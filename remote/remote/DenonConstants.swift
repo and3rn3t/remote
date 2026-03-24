@@ -18,11 +18,10 @@ enum DenonConstants {
     static let volumeDebounceMilliseconds = 150
 
     // Command timing (milliseconds)
-    static let commandThrottleMilliseconds = 50
-    static let postCommandDelayMilliseconds = 100
-    static let postStepDelayMilliseconds = 200
-    static let queryResponseDelayMilliseconds = 300
-    static let bulkQueryResponseDelayMilliseconds = 500
+    static let commandThrottleMilliseconds = 25
+    static let postCommandDelayMilliseconds = 25
+    static let postStepDelayMilliseconds = 150
+    static let bulkQueryResponseDelayMilliseconds = 400
     static let widgetUpdateCoalesceMilliseconds = 200
     static let connectionPollIntervalMilliseconds = 100
     static let connectionMonitorIntervalSeconds = 10

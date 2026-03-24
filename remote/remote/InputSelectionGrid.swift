@@ -8,6 +8,8 @@ import SwiftUI
 /// Reusable grid of input source buttons with glass styling.
 struct InputSelectionGrid: View {
     let currentInput: String
+    /// Custom aliases from the receiver (keyed by input code). Falls back to built-in names.
+    var aliases: [String: String] = [:]
     let onSelect: (String) -> Void
 
     var body: some View {
@@ -15,6 +17,7 @@ struct InputSelectionGrid: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
                 ForEach(DenonInputs.all, id: \.code) { input in
                     let isSelected = currentInput == input.code
+                    let displayName = aliases[input.code] ?? input.name
                     Button {
                         playHaptic(.light)
                         onSelect(input.code)
@@ -24,7 +27,7 @@ struct InputSelectionGrid: View {
                                 .font(.title2)
                                 .foregroundStyle(isSelected ? .white : .primary)
 
-                            Text(input.name)
+                            Text(displayName)
                                 .font(.caption)
                                 .foregroundStyle(isSelected ? .white : .primary)
                                 .lineLimit(1)
@@ -40,7 +43,7 @@ struct InputSelectionGrid: View {
                             .regular.interactive(),
                         in: .rect(cornerRadius: 12)
                     )
-                    .accessibilityLabel(input.name)
+                    .accessibilityLabel(displayName)
                     .accessibilityValue(isSelected ? "Selected" : "")
                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }

@@ -45,7 +45,6 @@ struct ContentView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
-        .background(Color(.systemBackground))
     }
 
     // MARK: - Receivers List

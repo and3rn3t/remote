@@ -73,7 +73,7 @@ struct DynamicSettingsView: View {
                                     api.state.dynamicVolume == option.code ?
                                         .regular.tint(.green).interactive() :
                                         .regular.interactive(),
-                                    in: .rect(cornerRadius: 10)
+                                    in: .rect(cornerRadius: 12)
                                 )
                                 .accessibilityLabel("Dynamic Volume \(option.name)")
                                 .accessibilityValue(api.state.dynamicVolume == option.code ? "Selected" : "")

@@ -108,6 +108,10 @@ struct DenonState {
     
     /// Receiver firmware version (if queried).
     var firmwareVersion: String = ""
+
+    /// Custom input aliases set on the receiver (e.g., "SAT/CBL" → "PS5").
+    /// Populated by querying `SSFUN ?` on connect. Falls back to built-in names when empty.
+    var inputAliases: [String: String] = [:]
 }
 
 /// Manages communication with Denon AVR via the network API.
@@ -266,14 +270,16 @@ final class DenonAPI {
         // Start continuous receive loop
         startReceiving()
 
-        // Brief settle delay before first command
-        try? await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
-
-        // Initial state refresh; failure is non-fatal — TCP is already established.
-        do {
-            try await refreshState()
-        } catch {
-            logger.log("Initial state refresh failed (non-fatal): \(error.localizedDescription)", category: .error)
+        // Initial state refresh runs in a detached task so it doesn't block
+        // the caller and doesn't queue ahead of immediate user commands.
+        Task { [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
+            do {
+                try await self.refreshState()
+            } catch {
+                self.logger.log("Initial state refresh failed (non-fatal): \(error.localizedDescription)", category: .error)
+            }
         }
     }
 
@@ -430,6 +436,7 @@ final class DenonAPI {
         try await sendCommand("PSTRE ?")
         try await sendCommand("PSDYNVOL ?")
         try await sendCommand("PSDYNEQ ?")
+        try await sendCommand("SSFUN ?")
 
         // Allow time for responses to arrive and be processed by the receive loop
         try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
@@ -524,6 +531,10 @@ final class DenonAPI {
             else if trimmed.hasPrefix("SSINFAI") {
                 parseReceiverInfoResponse(trimmed)
             }
+            // Input aliases
+            else if trimmed.hasPrefix("SSFUN") {
+                parseInputAliasResponse(trimmed)
+            }
             // Main zone
             else if trimmed.hasPrefix("PWON") {
                 state.isPowerOn = true
@@ -531,7 +542,12 @@ final class DenonAPI {
                 state.isPowerOn = false
             } else if trimmed.hasPrefix("MV") && !trimmed.hasPrefix("MVMAX") {
                 let volumeStr = trimmed.replacingOccurrences(of: "MV", with: "")
-                if let volume = Int(volumeStr) {
+                if volumeStr.count == 3 {
+                    // Half-step (e.g. "525" = 52.5 dB): round up so UI stays
+                    // consistent with the optimistic +1 update.
+                    let base = Int(volumeStr.prefix(2)) ?? 0
+                    state.volume = volumeStr.last == "5" ? base + 1 : base
+                } else if let volume = Int(volumeStr) {
                     state.volume = volume
                 }
             } else if trimmed.hasPrefix("MUON") {
@@ -618,6 +634,21 @@ final class DenonAPI {
         }
     }
 
+    private func parseInputAliasResponse(_ line: String) {
+        // Response format varies by firmware: "SSFUNSAT/CBL PS5" or "SSFUN SAT/CBL PS5"
+        // Drop the 5-char "SSFUN" prefix then trim any leading space to handle both.
+        let body = String(line.dropFirst("SSFUN".count)).trimmingCharacters(in: .whitespaces)
+        // Match against known input codes, longest first to avoid ambiguous prefix matches.
+        let sortedCodes = DenonInputs.all.map(\.code).sorted { $0.count > $1.count }
+        for code in sortedCodes where body.hasPrefix(code) {
+            let alias = String(body.dropFirst(code.count)).trimmingCharacters(in: .whitespaces)
+            if !alias.isEmpty {
+                state.inputAliases[code] = alias
+            }
+            return
+        }
+    }
+
     // MARK: - Control Methods
 
     func setPower(_ on: Bool) async throws {
@@ -627,25 +658,21 @@ final class DenonAPI {
 
     func setVolume(_ volume: Int) async throws {
         let clampedVolume = min(max(volume, 0), 98)
+        state.volume = clampedVolume
         let volumeString = String(format: "%02d", clampedVolume)
         try await sendCommand("MV\(volumeString)")
-        state.volume = clampedVolume
     }
 
     func volumeUp() async throws {
+        state.volume = min(state.volume + 1, DenonConstants.maxVolume)
         try await sendCommand("MVUP")
-        try await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
-        try await sendCommand("MV?")
-        try await Task.sleep(for: .milliseconds(DenonConstants.postCommandDelayMilliseconds))
-        readResponses()
+        // Receiver automatically broadcasts the new MV value — no need to poll.
     }
 
     func volumeDown() async throws {
+        state.volume = max(state.volume - 1, 0)
         try await sendCommand("MVDOWN")
-        try await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
-        try await sendCommand("MV?")
-        try await Task.sleep(for: .milliseconds(DenonConstants.postCommandDelayMilliseconds))
-        readResponses()
+        // Receiver automatically broadcasts the new MV value — no need to poll.
     }
 
     func setMute(_ muted: Bool) async throws {
@@ -670,8 +697,6 @@ final class DenonAPI {
 
     func querySurroundMode() async throws {
         try await sendCommand("MS?")
-        try await Task.sleep(for: .milliseconds(DenonConstants.queryResponseDelayMilliseconds))
-        readResponses()
     }
 
     // MARK: - Zone Controls
@@ -708,11 +733,11 @@ final class DenonAPI {
     }
 
     func zoneVolumeUp(_ zone: Zone) async throws {
-        try await zoneVolumeStep("UP", prefix: zone.prefix)
+        try await zoneVolumeStep("UP", prefix: zone.prefix, zone: zone)
     }
 
     func zoneVolumeDown(_ zone: Zone) async throws {
-        try await zoneVolumeStep("DOWN", prefix: zone.prefix)
+        try await zoneVolumeStep("DOWN", prefix: zone.prefix, zone: zone)
     }
 
     func setZoneMute(_ muted: Bool, zone: Zone) async throws {
@@ -728,24 +753,23 @@ final class DenonAPI {
     func refreshZoneState(_ zone: Zone) async throws {
         try await sendCommand("\(zone.prefix)?")
         try await sendCommand("\(zone.prefix)MU?")
-        try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
-        readResponses()
     }
 
-    private func zoneVolumeStep(_ direction: String, prefix: String) async throws {
+    private func zoneVolumeStep(_ direction: String, prefix: String, zone: Zone) async throws {
+        let kp = zone.keyPath
+        if direction == "UP" {
+            state[keyPath: kp].volume = min(state[keyPath: kp].volume + 1, DenonConstants.maxVolume)
+        } else {
+            state[keyPath: kp].volume = max(state[keyPath: kp].volume - 1, 0)
+        }
         try await sendCommand("\(prefix)\(direction)")
-        try await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
-        try await sendCommand("\(prefix)?")
-        try await Task.sleep(for: .milliseconds(DenonConstants.postCommandDelayMilliseconds))
-        readResponses()
+        // Receiver auto-broadcasts the new volume — no need to poll.
     }
 
     // MARK: - Now Playing
 
     func refreshNowPlaying() async throws {
         try await sendCommand("NSE")
-        try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
-        readResponses()
     }
 
     // MARK: - Sleep Timer
@@ -761,8 +785,6 @@ final class DenonAPI {
 
     func querySleepTimer() async throws {
         try await sendCommand("SLP?")
-        try await Task.sleep(for: .milliseconds(DenonConstants.queryResponseDelayMilliseconds))
-        readResponses()
     }
 
     // MARK: - Tone / EQ Controls
@@ -784,8 +806,6 @@ final class DenonAPI {
     func queryToneControls() async throws {
         try await sendCommand("PSBAS ?")
         try await sendCommand("PSTRE ?")
-        try await Task.sleep(for: .milliseconds(DenonConstants.queryResponseDelayMilliseconds))
-        readResponses()
     }
 
     // MARK: - Dynamic Volume / Dynamic EQ
@@ -803,8 +823,6 @@ final class DenonAPI {
     func queryDynamicSettings() async throws {
         try await sendCommand("PSDYNVOL ?")
         try await sendCommand("PSDYNEQ ?")
-        try await Task.sleep(for: .milliseconds(DenonConstants.queryResponseDelayMilliseconds))
-        readResponses()
     }
 
     // MARK: - Tuner Presets
@@ -827,8 +845,6 @@ final class DenonAPI {
     func queryReceiverInfo() async throws {
         try await sendCommand("SSINFAISMD ?")
         try await sendCommand("SSINFAISFSV ?")
-        try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
-        readResponses()
     }
 
     // MARK: - Transport Controls (Network Sources)
