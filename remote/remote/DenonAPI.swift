@@ -1145,9 +1145,10 @@ enum DenonError: LocalizedError {
 // MARK: - OnceFlag
 
 /// Ensures a closure is only executed once, safe to call from multiple concurrency contexts.
-private final class OnceFlag: @unchecked Sendable {
-    private var _done = false
+nonisolated private final class OnceFlag: @unchecked Sendable {
+    nonisolated(unsafe) private var _done = false
     private let nslock = NSLock()
+    nonisolated init() {}
     nonisolated func runOnce(_ action: () -> Void) {
         nslock.lock()
         let should = !_done

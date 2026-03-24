@@ -7,7 +7,7 @@ import Foundation
 
 // MARK: - Protocol & App Constants
 
-enum DenonConstants {
+nonisolated enum DenonConstants {
     static let defaultPort = 23
     static let maxVolume = 98
     static let connectionTimeout: TimeInterval = 5.0
