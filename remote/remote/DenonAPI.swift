@@ -612,29 +612,36 @@ final class DenonAPI {
                 parseInputAliasResponse(trimmed)
             }
             // Main zone
-            else if trimmed.hasPrefix("PWON") {
-                state.isPowerOn = true
-            } else if trimmed.hasPrefix("PWSTANDBY") {
-                state.isPowerOn = false
-            } else if trimmed.hasPrefix("MV") && !trimmed.hasPrefix("MVMAX") {
-                let volumeStr = trimmed.replacingOccurrences(of: "MV", with: "")
-                if volumeStr.count == 3 {
-                    // Half-step (e.g. "525" = 52.5 dB): round up so UI stays
-                    // consistent with the optimistic +1 update.
-                    let base = Int(volumeStr.prefix(2)) ?? 0
-                    state.volume = volumeStr.last == "5" ? base + 1 : base
-                } else if let volume = Int(volumeStr) {
-                    state.volume = volume
-                }
-            } else if trimmed.hasPrefix("MUON") {
-                state.isMuted = true
-            } else if trimmed.hasPrefix("MUOFF") {
-                state.isMuted = false
-            } else if trimmed.hasPrefix("SI") {
-                state.currentInput = trimmed.replacingOccurrences(of: "SI", with: "")
-            } else if trimmed.hasPrefix("MS") {
-                state.surroundMode = trimmed.replacingOccurrences(of: "MS", with: "")
+            else {
+                parseMainZoneResponse(trimmed)
             }
+        }
+    }
+
+    /// Parser for main zone power, volume, mute, input, and surround mode.
+    private func parseMainZoneResponse(_ trimmed: String) {
+        if trimmed.hasPrefix("PWON") {
+            state.isPowerOn = true
+        } else if trimmed.hasPrefix("PWSTANDBY") {
+            state.isPowerOn = false
+        } else if trimmed.hasPrefix("MV") && !trimmed.hasPrefix("MVMAX") {
+            let volumeStr = trimmed.replacingOccurrences(of: "MV", with: "")
+            if volumeStr.count == 3 {
+                // Half-step (e.g. "525" = 52.5 dB): round up so UI stays
+                // consistent with the optimistic +1 update.
+                let base = Int(volumeStr.prefix(2)) ?? 0
+                state.volume = volumeStr.last == "5" ? base + 1 : base
+            } else if let volume = Int(volumeStr) {
+                state.volume = volume
+            }
+        } else if trimmed.hasPrefix("MUON") {
+            state.isMuted = true
+        } else if trimmed.hasPrefix("MUOFF") {
+            state.isMuted = false
+        } else if trimmed.hasPrefix("SI") {
+            state.currentInput = trimmed.replacingOccurrences(of: "SI", with: "")
+        } else if trimmed.hasPrefix("MS") {
+            state.surroundMode = trimmed.replacingOccurrences(of: "MS", with: "")
         }
     }
 

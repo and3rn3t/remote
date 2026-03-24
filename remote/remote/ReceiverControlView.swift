@@ -529,7 +529,11 @@ struct ReceiverControlView: View {
         .buttonStyle(.glass)
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadius))
         .accessibilityLabel(showSecondaryControls ? "Collapse secondary controls" : "Expand secondary controls")
-        .accessibilityHint(showSecondaryControls ? "Hides surround mode, tone, sleep and scene controls" : "Shows surround mode, tone, sleep and scene controls")
+        .accessibilityHint(
+            showSecondaryControls
+                ? "Hides surround mode, tone, sleep and scene controls"
+                : "Shows surround mode, tone, sleep and scene controls"
+        )
     }
 
     // MARK: - Zone Picker
