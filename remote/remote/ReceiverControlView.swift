@@ -24,7 +24,7 @@ struct ReceiverControlView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: Design.spacingXL) {
                 if api.isConnected {
                     connectedView
                 } else {
@@ -94,7 +94,7 @@ struct ReceiverControlView: View {
     // MARK: - Connected View
 
     private var connectedView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: Design.spacingXL) {
             zonePicker
 
             if selectedZone == 0 {
@@ -109,7 +109,7 @@ struct ReceiverControlView: View {
                 }
 
                 if showSecondaryControls {
-                    VStack(spacing: 24) {
+                    VStack(spacing: Design.spacingXL) {
                         if api.isTunerActive {
                             tunerPresetsSection
                         }
@@ -143,9 +143,9 @@ struct ReceiverControlView: View {
 
     private var powerVolumeControl: some View {
         GlassEffectContainer(spacing: 0) {
-            VStack(spacing: 16) {
+            VStack(spacing: Design.spacingLG) {
                 // Power row
-                HStack(spacing: 12) {
+                HStack(spacing: Design.spacingMD) {
                     Image(systemName: "power")
                         .font(.title3)
                         .foregroundStyle(api.state.isPowerOn ? .green : .secondary)
@@ -221,7 +221,7 @@ struct ReceiverControlView: View {
                 .accessibilityHint("Adjusts volume from 0 to \(receiver.volumeLimit)")
 
                 // Volume step buttons
-                HStack(spacing: 16) {
+                HStack(spacing: Design.spacingLG) {
                     Button {
                         playHaptic(.light)
                         apiAction { try await api.volumeDown() }
@@ -247,7 +247,7 @@ struct ReceiverControlView: View {
                             .contentTransition(.symbolEffect(.replace))
                     }
                     .buttonStyle(.glassProminent)
-                    .glassEffect(.regular.tint(api.state.isMuted ? .red : .blue).interactive(), in: .rect(cornerRadius: 12))
+                    .glassEffect(.regular.tint(api.state.isMuted ? .red : .blue).interactive(), in: .rect(cornerRadius: Design.cornerRadius))
                     .accessibilityLabel(api.state.isMuted ? "Unmute" : "Mute")
                     .accessibilityValue(api.state.isMuted ? "Muted" : "Unmuted")
                     .keyboardShortcut("m", modifiers: .command)
@@ -266,13 +266,13 @@ struct ReceiverControlView: View {
                     .keyboardShortcut(.upArrow, modifiers: .command)
                 }
             }
-            .padding(20)
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
+            .padding(Design.cardPadding)
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadiusLarge))
         }
     }
 
     private var inputSelection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Design.spacingLG) {
             HStack {
                 Image(systemName: "tv.and.hifispeaker.fill")
                     .font(.title3)
@@ -281,7 +281,7 @@ struct ReceiverControlView: View {
                 Text("Input Source")
                     .font(.headline)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Design.spacingXS)
 
             InputSelectionGrid(currentInput: api.state.currentInput, aliases: api.state.inputAliases) { code in
                 apiAction { try await api.setInput(code) }
@@ -292,7 +292,7 @@ struct ReceiverControlView: View {
     // MARK: - Surround Mode
 
     private var surroundModeSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Design.spacingLG) {
             HStack {
                 Image(systemName: "hifispeaker.and.appletv.fill")
                     .font(.title3)
@@ -307,10 +307,10 @@ struct ReceiverControlView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Design.spacingXS)
 
-            GlassEffectContainer(spacing: 12.0) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 12) {
+            GlassEffectContainer(spacing: Design.spacingMD) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: Design.gridMinLarge))], spacing: Design.spacingMD) {
                     ForEach(DenonSurroundModes.all, id: \.code) { mode in
                         Button {
                             playHaptic(.light)
@@ -322,14 +322,14 @@ struct ReceiverControlView: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
+                                .padding(.vertical, Design.spacingMD)
                         }
                         .buttonStyle(.plain)
                         .glassEffect(
                             api.state.surroundMode == mode.code ?
                                 .regular.tint(.teal).interactive() :
                                 .regular.interactive(),
-                            in: .rect(cornerRadius: 12)
+                            in: .rect(cornerRadius: Design.cornerRadius)
                         )
                         .accessibilityLabel(mode.name)
                         .accessibilityValue(api.state.surroundMode == mode.code ? "Selected" : "")
@@ -343,7 +343,7 @@ struct ReceiverControlView: View {
     // MARK: - Sleep Timer
 
     private var sleepTimerSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Design.spacingLG) {
             HStack {
                 Image(systemName: "moon.zzz.fill")
                     .font(.title3)
@@ -360,10 +360,10 @@ struct ReceiverControlView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Design.spacingXS)
 
-            GlassEffectContainer(spacing: 12.0) {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 12) {
+            GlassEffectContainer(spacing: Design.spacingMD) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: Design.gridMinSmall))], spacing: Design.spacingMD) {
                     ForEach(DenonSleepTimer.options, id: \.value) { option in
                         let isActive = (option.value == "OFF" && api.state.sleepTimer == nil) ||
                             (Int(option.value) == api.state.sleepTimer)
@@ -375,14 +375,14 @@ struct ReceiverControlView: View {
                                 .font(.caption)
                                 .foregroundStyle(isActive ? .white : .primary)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
+                                .padding(.vertical, Design.spacingMD)
                         }
                         .buttonStyle(.plain)
                         .glassEffect(
                             isActive ?
                                 .regular.tint(.indigo).interactive() :
                                 .regular.interactive(),
-                            in: .rect(cornerRadius: 12)
+                            in: .rect(cornerRadius: Design.cornerRadius)
                         )
                         .accessibilityLabel(option.name)
                         .accessibilityValue(isActive ? "Selected" : "")
@@ -396,7 +396,7 @@ struct ReceiverControlView: View {
     // MARK: - Tuner Presets
 
     private var tunerPresetsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Design.spacingLG) {
             HStack {
                 Image(systemName: "radio.fill")
                     .font(.title3)
@@ -405,42 +405,42 @@ struct ReceiverControlView: View {
                 Text("Tuner Presets")
                     .font(.headline)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Design.spacingXS)
 
-            GlassEffectContainer(spacing: 12.0) {
-                HStack(spacing: 12) {
+            GlassEffectContainer(spacing: Design.spacingMD) {
+                HStack(spacing: Design.spacingMD) {
                     Button {
                         playHaptic(.light)
                         apiAction { try await api.tunerPresetDown() }
                     } label: {
-                        VStack(spacing: 8) {
+                        VStack(spacing: Design.spacingSM) {
                             Image(systemName: "chevron.left")
                                 .font(.title2)
                             Text("Previous")
                                 .font(.caption)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, Design.spacingLG)
                     }
                     .buttonStyle(.glass)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadius))
                     .accessibilityLabel("Previous tuner preset")
 
                     Button {
                         playHaptic(.light)
                         apiAction { try await api.tunerPresetUp() }
                     } label: {
-                        VStack(spacing: 8) {
+                        VStack(spacing: Design.spacingSM) {
                             Image(systemName: "chevron.right")
                                 .font(.title2)
                             Text("Next")
                                 .font(.caption)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, Design.spacingLG)
                     }
                     .buttonStyle(.glass)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadius))
                     .accessibilityLabel("Next tuner preset")
                 }
             }
@@ -450,7 +450,7 @@ struct ReceiverControlView: View {
     // MARK: - Scenes
 
     private var scenesSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Design.spacingLG) {
             HStack {
                 Image(systemName: "theatermasks.fill")
                     .font(.title3)
@@ -459,42 +459,42 @@ struct ReceiverControlView: View {
                 Text("Scenes")
                     .font(.headline)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Design.spacingXS)
 
-            GlassEffectContainer(spacing: 12.0) {
-                HStack(spacing: 12) {
+            GlassEffectContainer(spacing: Design.spacingMD) {
+                HStack(spacing: Design.spacingMD) {
                     Button {
                         playHaptic(.light)
                         showingSaveScene = true
                     } label: {
-                        VStack(spacing: 8) {
+                        VStack(spacing: Design.spacingSM) {
                             Image(systemName: "square.and.arrow.down.fill")
                                 .font(.title2)
                             Text("Save Scene")
                                 .font(.caption)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, Design.spacingLG)
                     }
                     .buttonStyle(.glass)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadius))
                     .accessibilityLabel("Save current configuration as a scene")
 
                     Button {
                         playHaptic(.light)
                         showingScenes = true
                     } label: {
-                        VStack(spacing: 8) {
+                        VStack(spacing: Design.spacingSM) {
                             Image(systemName: "theatermasks.fill")
                                 .font(.title2)
                             Text("All Scenes")
                                 .font(.caption)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, Design.spacingLG)
                     }
                     .buttonStyle(.glass)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadius))
                     .accessibilityLabel("View and recall saved scenes")
                 }
             }
@@ -518,10 +518,10 @@ struct ReceiverControlView: View {
             .foregroundStyle(.secondary)
             .contentTransition(.symbolEffect(.replace))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.vertical, Design.spacingMD)
         }
         .buttonStyle(.glass)
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadius))
         .accessibilityLabel(showSecondaryControls ? "Collapse secondary controls" : "Expand secondary controls")
         .accessibilityHint(showSecondaryControls ? "Hides surround mode, tone, sleep and scene controls" : "Shows surround mode, tone, sleep and scene controls")
     }
@@ -542,7 +542,7 @@ struct ReceiverControlView: View {
 
     private var disconnectedView: some View {
         ContentUnavailableView {
-            VStack(spacing: 8) {
+            VStack(spacing: Design.spacingSM) {
                 Image(systemName: api.isReconnecting ? "arrow.triangle.2.circlepath" : "antenna.radiowaves.left.and.right.slash")
                     .font(.system(size: 36))
                     .symbolEffect(.pulse, isActive: api.isReconnecting)
@@ -550,11 +550,11 @@ struct ReceiverControlView: View {
                     .font(.headline)
             }
         } description: {
-            VStack(spacing: 16) {
+            VStack(spacing: Design.spacingLG) {
                 Text("Connect to **\(receiver.name)** at \(receiver.ipAddress)")
 
                 if api.isReconnecting {
-                    VStack(spacing: 8) {
+                    VStack(spacing: Design.spacingSM) {
                         ProgressView()
                         Text("Attempt \(api.currentReconnectAttempt) of \(DenonConstants.maxReconnectAttempts)")
                             .font(.caption)

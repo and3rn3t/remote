@@ -11,7 +11,7 @@ struct DynamicSettingsView: View {
     let onError: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Design.spacingLG) {
             HStack {
                 Image(systemName: "waveform.badge.magnifyingglass")
                     .font(.title3)
@@ -20,10 +20,10 @@ struct DynamicSettingsView: View {
                 Text("Dynamic Audio")
                     .font(.headline)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Design.spacingXS)
 
-            GlassEffectContainer(spacing: 12.0) {
-                VStack(spacing: 16) {
+            GlassEffectContainer(spacing: Design.spacingMD) {
+                VStack(spacing: Design.spacingLG) {
                     HStack {
                         Image(systemName: "ear.fill")
                             .foregroundStyle(.green)
@@ -44,7 +44,7 @@ struct DynamicSettingsView: View {
 
                     Divider()
 
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: Design.spacingMD) {
                         HStack {
                             Image(systemName: "speaker.wave.2.fill")
                                 .foregroundStyle(.green)
@@ -56,7 +56,7 @@ struct DynamicSettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        HStack(spacing: 8) {
+                        HStack(spacing: Design.spacingSM) {
                             ForEach(DenonDynamicVolume.options, id: \.code) { option in
                                 Button {
                                     playHaptic(.light)
@@ -66,14 +66,14 @@ struct DynamicSettingsView: View {
                                         .font(.caption)
                                         .foregroundStyle(api.state.dynamicVolume == option.code ? .white : .primary)
                                         .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 10)
+                                        .padding(.vertical, Design.spacingSM)
                                 }
                                 .buttonStyle(.plain)
                                 .glassEffect(
                                     api.state.dynamicVolume == option.code ?
                                         .regular.tint(.green).interactive() :
                                         .regular.interactive(),
-                                    in: .rect(cornerRadius: 12)
+                                    in: .rect(cornerRadius: Design.cornerRadius)
                                 )
                                 .accessibilityLabel("Dynamic Volume \(option.name)")
                                 .accessibilityValue(api.state.dynamicVolume == option.code ? "Selected" : "")
@@ -82,8 +82,8 @@ struct DynamicSettingsView: View {
                         }
                     }
                 }
-                .padding(20)
-                .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                .padding(Design.cardPadding)
+                .glassEffect(.regular, in: .rect(cornerRadius: Design.cornerRadiusLarge))
             }
         }
     }

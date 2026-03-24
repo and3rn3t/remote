@@ -49,7 +49,7 @@ struct ReceiverSettingsView: View {
                 Section {
                     Toggle("Favorite", isOn: $receiver.isFavorite)
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Design.spacingSM) {
                         HStack {
                             Text("Volume Limit")
                             Spacer()

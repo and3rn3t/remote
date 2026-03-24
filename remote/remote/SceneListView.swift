@@ -43,7 +43,7 @@ struct SceneListView: View {
                     }
                 } else {
                     ScrollView {
-                        VStack(spacing: 12) {
+                        VStack(spacing: Design.spacingMD) {
                             ForEach(scenes) { scene in
                                 SceneRowView(
                                     scene: scene,
@@ -145,19 +145,19 @@ struct SceneRowView: View {
         GlassEffectContainer(spacing: 0) {
             Button(action: onRecall) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: Design.spacingXS) {
                         Text(scene.name)
                             .font(.headline)
                             .foregroundStyle(.primary)
 
-                        HStack(spacing: 8) {
+                        HStack(spacing: Design.spacingSM) {
                             Label(inputName(for: scene.inputCode), systemImage: "arrow.right.circle")
                             Text("Vol \(scene.volume)")
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                        HStack(spacing: 4) {
+                        HStack(spacing: Design.spacingXS) {
                             if scene.hasZone2 { zoneTag("Z2") }
                             if scene.hasZone3 { zoneTag("Z3") }
                         }
@@ -165,7 +165,7 @@ struct SceneRowView: View {
 
                     Spacer()
 
-                    VStack(alignment: .trailing, spacing: 4) {
+                    VStack(alignment: .trailing, spacing: Design.spacingXS) {
                         Image(systemName: isRecalled ? "checkmark.circle.fill" : "play.circle.fill")
                             .font(.title2)
                             .foregroundStyle(isRecalled ? .green : .blue)
@@ -176,12 +176,12 @@ struct SceneRowView: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                .padding(16)
+                .padding(Design.cardPadding)
             }
             .buttonStyle(.plain)
             .glassEffect(
                 isRecalled ? .regular.tint(.green).interactive() : .regular.interactive(),
-                in: .rect(cornerRadius: 14)
+                in: .rect(cornerRadius: Design.cornerRadius)
             )
         }
         .accessibilityLabel("Recall scene \(scene.name)")
@@ -191,8 +191,8 @@ struct SceneRowView: View {
     private func zoneTag(_ label: String) -> some View {
         Text(label)
             .font(.caption2.bold())
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, Design.spacingXS)
+            .padding(.vertical, Design.spacingXS / 2)
             .background(.ultraThinMaterial, in: .capsule)
     }
 
@@ -279,7 +279,7 @@ struct SaveSceneView: View {
     }
 
     private var quickPresetButtons: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: Design.gridMinMedium))], spacing: Design.spacingSM) {
             presetButton("Movie Night", icon: "film.fill")
             presetButton("Music", icon: "music.note")
             presetButton("Party", icon: "party.popper.fill")
@@ -293,14 +293,14 @@ struct SaveSceneView: View {
         Button {
             sceneName = name
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: Design.spacingXS) {
                 Image(systemName: icon)
                     .font(.title3)
                 Text(name)
                     .font(.caption)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(.vertical, Design.spacingSM)
         }
         .buttonStyle(.bordered)
         .tint(sceneName == name ? .blue : .secondary)

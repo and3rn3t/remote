@@ -13,8 +13,8 @@ struct InputSelectionGrid: View {
     let onSelect: (String) -> Void
 
     var body: some View {
-        GlassEffectContainer(spacing: 12.0) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
+        GlassEffectContainer(spacing: Design.spacingMD) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: Design.gridMinMedium))], spacing: Design.spacingMD) {
                 ForEach(DenonInputs.all, id: \.code) { input in
                     let isSelected = currentInput == input.code
                     let displayName = aliases[input.code] ?? input.name
@@ -22,7 +22,7 @@ struct InputSelectionGrid: View {
                         playHaptic(.light)
                         onSelect(input.code)
                     } label: {
-                        VStack(spacing: 8) {
+                        VStack(spacing: Design.spacingSM) {
                             Image(systemName: DenonInputs.icon(for: input.code))
                                 .font(.title2)
                                 .foregroundStyle(isSelected ? .white : .primary)
@@ -34,14 +34,14 @@ struct InputSelectionGrid: View {
                                 .minimumScaleFactor(0.8)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, Design.spacingMD)
                     }
                     .buttonStyle(.plain)
                     .glassEffect(
                         isSelected ?
                             .regular.tint(.purple).interactive() :
                             .regular.interactive(),
-                        in: .rect(cornerRadius: 12)
+                        in: .rect(cornerRadius: Design.cornerRadius)
                     )
                     .accessibilityLabel(displayName)
                     .accessibilityValue(isSelected ? "Selected" : "")

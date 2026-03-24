@@ -11,7 +11,7 @@ struct NowPlayingView: View {
     let onError: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Design.spacingLG) {
             HStack {
                 Image(systemName: "music.note")
                     .font(.title3)
@@ -32,18 +32,18 @@ struct NowPlayingView: View {
                 .contentShape(.rect)
                 .accessibilityLabel("Refresh Now Playing")
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Design.spacingXS)
 
-            GlassEffectContainer(spacing: 12.0) {
-                VStack(spacing: 16) {
+            GlassEffectContainer(spacing: Design.spacingMD) {
+                VStack(spacing: Design.spacingLG) {
                     if api.state.nowPlaying.isEmpty {
                         Text("No media information available")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
+                            .padding(.vertical, Design.spacingLG)
                     } else {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: Design.spacingSM) {
                             if !api.state.nowPlaying.line3.isEmpty {
                                 Text(api.state.nowPlaying.line3)
                                     .font(.headline)
@@ -64,7 +64,7 @@ struct NowPlayingView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                        HStack(spacing: 20) {
+                        HStack(spacing: Design.spacingLG) {
                             transportButton(systemImage: "backward.fill", label: "Previous") {
                                 try await api.transportSkipPrevious()
                             }
@@ -83,8 +83,8 @@ struct NowPlayingView: View {
                         }
                     }
                 }
-                .padding(20)
-                .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                .padding(Design.cardPadding)
+                .glassEffect(.regular, in: .rect(cornerRadius: Design.cornerRadiusLarge))
             }
         }
     }

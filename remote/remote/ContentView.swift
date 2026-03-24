@@ -166,11 +166,11 @@ struct ReceiverRowView: View {
                 .font(.title2)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Design.spacingXS) {
                 Text(receiver.name)
                     .font(.headline)
 
-                HStack(spacing: 8) {
+                HStack(spacing: Design.spacingSM) {
                     Text(receiver.ipAddress)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -286,7 +286,7 @@ struct AddReceiverView: View {
                             addDiscoveredReceiver(discovered)
                         } label: {
                             HStack {
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: Design.spacingXS) {
                                     Text(discovered.name)
                                         .font(.subheadline.weight(.medium))
                                         .foregroundStyle(.primary)

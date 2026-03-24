@@ -23,7 +23,7 @@ struct ZoneControlView: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: Design.spacingXL) {
             powerVolumeControl
             inputSelection
         }
@@ -36,8 +36,8 @@ struct ZoneControlView: View {
 
     private var powerVolumeControl: some View {
         GlassEffectContainer(spacing: 0) {
-            VStack(spacing: 16) {
-                HStack(spacing: 12) {
+            VStack(spacing: Design.spacingLG) {
+                HStack(spacing: Design.spacingMD) {
                     Image(systemName: "power")
                         .font(.title3)
                         .foregroundStyle(zoneState.isPowerOn ? .green : .secondary)
@@ -62,7 +62,7 @@ struct ZoneControlView: View {
 
                 Divider()
 
-                VStack(spacing: 12) {
+                VStack(spacing: Design.spacingMD) {
                     HStack {
                         Image(systemName: zoneState.isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
                             .font(.title2)
@@ -104,7 +104,7 @@ struct ZoneControlView: View {
                     .accessibilityValue("\(zoneState.volume) decibels")
                     .accessibilityHint("Adjusts volume from 0 to \(receiver.volumeLimit)")
 
-                    HStack(spacing: 16) {
+                    HStack(spacing: Design.spacingLG) {
                         Button {
                             playHaptic(.light)
                             apiAction { try await api.zoneVolumeDown(zone) }
@@ -126,7 +126,7 @@ struct ZoneControlView: View {
                                 .font(.title3)
                         }
                         .buttonStyle(.glassProminent)
-                        .glassEffect(.regular.tint(zoneState.isMuted ? .red : .blue).interactive(), in: .rect(cornerRadius: 12))
+                        .glassEffect(.regular.tint(zoneState.isMuted ? .red : .blue).interactive(), in: .rect(cornerRadius: Design.cornerRadius))
                         .accessibilityLabel(zoneState.isMuted ? "Zone \(zoneNumber) Unmute" : "Zone \(zoneNumber) Mute")
 
                         Button {
@@ -143,15 +143,15 @@ struct ZoneControlView: View {
                     }
                 }
             }
-            .padding(20)
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
+            .padding(Design.cardPadding)
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadiusLarge))
         }
     }
 
     // MARK: - Input Selection
 
     private var inputSelection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Design.spacingLG) {
             HStack {
                 Image(systemName: "tv.and.hifispeaker.fill")
                     .font(.title3)
@@ -160,7 +160,7 @@ struct ZoneControlView: View {
                 Text("Zone \(zoneNumber) Input")
                     .font(.headline)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Design.spacingXS)
 
             InputSelectionGrid(currentInput: zoneState.currentInput, aliases: api.state.inputAliases) { code in
                 apiAction { try await api.setZoneInput(code, zone: zone) }

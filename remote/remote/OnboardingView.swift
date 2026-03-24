@@ -24,14 +24,14 @@ struct OnboardingView: View {
     // MARK: - Welcome Page
 
     private var welcomePage: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: Design.spacingXXL) {
             Spacer()
 
             Image(systemName: "hifispeaker.2.fill")
                 .font(.system(size: 80))
                 .foregroundStyle(.tint)
 
-            VStack(spacing: 12) {
+            VStack(spacing: Design.spacingMD) {
                 Text("Welcome to Denon Remote")
                     .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
@@ -52,27 +52,27 @@ struct OnboardingView: View {
                     Text("Continue")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, Design.spacingMD)
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 14))
+                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadius))
                 .accessibilityLabel("Continue to next page")
             }
         }
-        .padding(32)
+        .padding(Design.spacingXXL)
     }
 
     // MARK: - Network Page
 
     private var networkPage: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: Design.spacingXXL) {
             Spacer()
 
             Image(systemName: "wifi")
                 .font(.system(size: 80))
                 .foregroundStyle(.tint)
 
-            VStack(spacing: 12) {
+            VStack(spacing: Design.spacingMD) {
                 Text("Local Network Access")
                     .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
@@ -93,27 +93,27 @@ struct OnboardingView: View {
                     Text("Continue")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, Design.spacingMD)
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 14))
+                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Design.cornerRadius))
                 .accessibilityLabel("Continue to next page")
             }
         }
-        .padding(32)
+        .padding(Design.spacingXXL)
     }
 
     // MARK: - Get Started Page
 
     private var getStartedPage: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: Design.spacingXXL) {
             Spacer()
 
             Image(systemName: "antenna.radiowaves.left.and.right")
                 .font(.system(size: 80))
                 .foregroundStyle(.tint)
 
-            VStack(spacing: 12) {
+            VStack(spacing: Design.spacingMD) {
                 Text("Add Your Receiver")
                     .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
@@ -135,14 +135,14 @@ struct OnboardingView: View {
                     Text("Get Started")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, Design.spacingMD)
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.tint(.blue).interactive(), in: .rect(cornerRadius: 14))
+                .glassEffect(.regular.tint(.blue).interactive(), in: .rect(cornerRadius: Design.cornerRadius))
                 .accessibilityLabel("Get started with the app")
             }
         }
-        .padding(32)
+        .padding(Design.spacingXXL)
     }
 }
 

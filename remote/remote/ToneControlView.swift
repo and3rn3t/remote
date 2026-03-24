@@ -13,7 +13,7 @@ struct ToneControlView: View {
     @State private var toneDebounceTask: Task<Void, Never>?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Design.spacingLG) {
             HStack {
                 Image(systemName: "slider.horizontal.3")
                     .font(.title3)
@@ -22,10 +22,10 @@ struct ToneControlView: View {
                 Text("Tone Controls")
                     .font(.headline)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Design.spacingXS)
 
-            GlassEffectContainer(spacing: 12.0) {
-                VStack(spacing: 20) {
+            GlassEffectContainer(spacing: Design.spacingMD) {
+                VStack(spacing: Design.spacingLG) {
                     toneSlider(label: "Bass",
                                value: api.state.bass,
                                onSet: { api.state.bass = $0 },
@@ -36,8 +36,8 @@ struct ToneControlView: View {
                                onSet: { api.state.treble = $0 },
                                apiCall: api.setTreble)
                 }
-                .padding(20)
-                .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                .padding(Design.cardPadding)
+                .glassEffect(.regular, in: .rect(cornerRadius: Design.cornerRadiusLarge))
             }
         }
     }
@@ -48,7 +48,7 @@ struct ToneControlView: View {
         onSet: @escaping (Int) -> Void,
         apiCall: @escaping (Int) async throws -> Void
     ) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: Design.spacingSM) {
             HStack {
                 Text(label)
                     .font(.subheadline)

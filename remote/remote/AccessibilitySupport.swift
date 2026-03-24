@@ -25,7 +25,7 @@ struct AccessibilityAdaptiveModifier: ViewModifier {
         isProminent: Bool = false,
         tintColor: Color? = nil,
         fallbackBackground: Color = Color(.systemBackground).opacity(0.9),
-        cornerRadius: CGFloat = 12
+        cornerRadius: CGFloat = Design.cornerRadius
     ) {
         self.isProminent = isProminent
         self.tintColor = tintColor
@@ -64,7 +64,7 @@ extension View {
         isProminent: Bool = false,
         tintColor: Color? = nil,
         fallbackBackground: Color = Color(.systemBackground).opacity(0.9),
-        cornerRadius: CGFloat = 12
+        cornerRadius: CGFloat = Design.cornerRadius
     ) -> some View {
         modifier(AccessibilityAdaptiveModifier(
             isProminent: isProminent,
@@ -88,13 +88,13 @@ struct AdaptiveButtonStyle: ButtonStyle {
         let isLargeText = dynamicTypeSize >= .accessibility1
 
         configuration.label
-            .padding(.horizontal, isLargeText ? 24 : 16)
-            .padding(.vertical, isLargeText ? 16 : 12)
-            .frame(minHeight: isLargeText ? 56 : 44) // Minimum tap target
+            .padding(.horizontal, isLargeText ? Design.spacingXL : Design.spacingLG)
+            .padding(.vertical, isLargeText ? Design.spacingLG : Design.spacingMD)
+            .frame(minHeight: isLargeText ? 56 : 44)
             .adaptiveGlassEffect(
                 isProminent: isProminent,
                 tintColor: tintColor ?? .blue,
-                cornerRadius: 12
+                cornerRadius: Design.cornerRadius
             )
             .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
@@ -137,7 +137,7 @@ struct AccessibleSlider: View {
     }
 
     var body: some View {
-        VStack(spacing: dynamicTypeSize >= .accessibility1 ? 12 : 8) {
+        VStack(spacing: dynamicTypeSize >= .accessibility1 ? Design.spacingMD : Design.spacingSM) {
             HStack {
                 Text(label)
                     .font(.headline)

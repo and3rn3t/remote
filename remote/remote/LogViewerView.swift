@@ -82,13 +82,13 @@ struct LogViewerView: View {
 
     private var logList: some View {
         List(filteredEntries.reversed()) { entry in
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: Design.spacingSM) {
                 Image(systemName: iconForCategory(entry.category))
                     .foregroundStyle(colorForCategory(entry.category))
                     .font(.caption)
-                    .frame(width: 16)
+                    .frame(width: Design.spacingLG)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Design.spacingXS) {
                     Text(entry.message)
                         .font(.caption.monospaced())
                         .lineLimit(3)
