@@ -39,6 +39,11 @@ struct ReceiverControlView: View {
                 connectionButton
             }
         }
+        .onAppear {
+            if !api.isConnected && !api.isReconnecting {
+                connectToReceiver()
+            }
+        }
         .onDisappear {
             volumeDebounceTask?.cancel()
             api.disconnect()

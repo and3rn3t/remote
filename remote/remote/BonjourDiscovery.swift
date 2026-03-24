@@ -95,9 +95,10 @@ final class BonjourDiscovery {
         browser.stateUpdateHandler = { [weak self] state in
             switch state {
             case .failed(let error):
-                Task { @MainActor in
-                    self?.errorMessage = "Network scan failed: \(error.localizedDescription)"
-                    self?.isScanning = false
+                guard let self else { return }
+                Task { @MainActor [self] in
+                    self.errorMessage = "Network scan failed: \(error.localizedDescription)"
+                    self.isScanning = false
                 }
             case .cancelled:
                 break
