@@ -29,16 +29,19 @@ jobs:
           xcodebuild build \
             -project remote/remote.xcodeproj \
             -scheme remote \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.0' \
+            -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO | xcpretty
+
+      - name: Install iOS Simulator Runtime
+        run: sudo xcodebuild -downloadPlatform iOS
 
       - name: Test with Coverage
         run: |
           xcodebuild test \
             -project remote/remote.xcodeproj \
             -scheme remote \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.0' \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
             -enableCodeCoverage YES \
             -derivedDataPath ./DerivedData \
             -skipPackagePluginValidation \
