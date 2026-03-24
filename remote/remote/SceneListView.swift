@@ -42,17 +42,24 @@ struct SceneListView: View {
                         .buttonStyle(.glass)
                     }
                 } else {
-                    List {
-                        Section {
+                    ScrollView {
+                        VStack(spacing: 12) {
                             ForEach(scenes) { scene in
-                                SceneRowView(scene: scene) {
-                                    recallScene(scene)
+                                SceneRowView(
+                                    scene: scene,
+                                    onRecall: { recallScene(scene) },
+                                    isRecalled: recalledSceneID == scene.id
+                                )
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        withAnimation { modelContext.delete(scene) }
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
-                            .onDelete(perform: deleteScenes)
-                        } header: {
-                            Text("Saved Scenes")
                         }
+                        .padding()
                     }
                 }
             }
@@ -80,13 +87,10 @@ struct SceneListView: View {
         }
     }
 
-    private func deleteScenes(offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(scenes[index])
-        }
-    }
+    @State private var recalledSceneID: UUID?
 
     private func recallScene(_ scene: ReceiverScene) {
+        playHaptic()
         Task {
             do {
                 // Main zone
@@ -116,11 +120,17 @@ struct SceneListView: View {
                 if let muted = scene.zone3IsMuted {
                     try await api.setZoneMute(muted, zone: .zone3)
                 }
+
+                playHaptic(.heavy)
+                withAnimation(.smooth(duration: 0.3)) {
+                    recalledSceneID = scene.id
+                }
+                try? await Task.sleep(for: .seconds(1))
+                dismiss()
             } catch {
                 api.errorMessage = error.localizedDescription
             }
         }
-        dismiss()
     }
 }
 
@@ -129,40 +139,50 @@ struct SceneListView: View {
 struct SceneRowView: View {
     let scene: ReceiverScene
     let onRecall: () -> Void
+    var isRecalled: Bool = false
 
     var body: some View {
-        Button(action: onRecall) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(scene.name)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+        GlassEffectContainer(spacing: 0) {
+            Button(action: onRecall) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(scene.name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
 
-                    HStack(spacing: 8) {
-                        Label(inputName(for: scene.inputCode), systemImage: "arrow.right.circle")
-                        Text("Vol \(scene.volume)")
+                        HStack(spacing: 8) {
+                            Label(inputName(for: scene.inputCode), systemImage: "arrow.right.circle")
+                            Text("Vol \(scene.volume)")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                        HStack(spacing: 4) {
+                            if scene.hasZone2 { zoneTag("Z2") }
+                            if scene.hasZone3 { zoneTag("Z3") }
+                        }
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
 
-                    HStack(spacing: 4) {
-                        if scene.hasZone2 { zoneTag("Z2") }
-                        if scene.hasZone3 { zoneTag("Z3") }
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Image(systemName: isRecalled ? "checkmark.circle.fill" : "play.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(isRecalled ? .green : .blue)
+                            .contentTransition(.symbolEffect(.replace))
+
+                        Text(scene.createdAt, format: .relative(presentation: .named))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
                 }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    Image(systemName: "play.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.blue)
-
-                    Text(scene.createdAt, format: .relative(presentation: .named))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+                .padding(16)
             }
+            .buttonStyle(.plain)
+            .glassEffect(
+                isRecalled ? .regular.tint(.green).interactive() : .regular.interactive(),
+                in: .rect(cornerRadius: 14)
+            )
         }
         .accessibilityLabel("Recall scene \(scene.name)")
         .accessibilityHint("Input \(inputName(for: scene.inputCode)), volume \(scene.volume)")

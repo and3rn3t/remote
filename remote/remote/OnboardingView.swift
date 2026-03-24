@@ -44,14 +44,20 @@ struct OnboardingView: View {
 
             Spacer()
 
-            Button {
-                withAnimation { currentPage = 1 }
-            } label: {
-                Text("Continue")
-                    .frame(maxWidth: .infinity)
+            GlassEffectContainer(spacing: 0) {
+                Button {
+                    playHaptic()
+                    withAnimation { currentPage = 1 }
+                } label: {
+                    Text("Continue")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 14))
+                .accessibilityLabel("Continue to next page")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
         }
         .padding(32)
     }
@@ -79,14 +85,20 @@ struct OnboardingView: View {
 
             Spacer()
 
-            Button {
-                withAnimation { currentPage = 2 }
-            } label: {
-                Text("Continue")
-                    .frame(maxWidth: .infinity)
+            GlassEffectContainer(spacing: 0) {
+                Button {
+                    playHaptic()
+                    withAnimation { currentPage = 2 }
+                } label: {
+                    Text("Continue")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 14))
+                .accessibilityLabel("Continue to next page")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
         }
         .padding(32)
     }
@@ -114,15 +126,21 @@ struct OnboardingView: View {
 
             Spacer()
 
-            Button {
-                AppSettings.hasCompletedOnboarding = true
-                onComplete()
-            } label: {
-                Text("Get Started")
-                    .frame(maxWidth: .infinity)
+            GlassEffectContainer(spacing: 0) {
+                Button {
+                    playHaptic()
+                    AppSettings.hasCompletedOnboarding = true
+                    onComplete()
+                } label: {
+                    Text("Get Started")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+                .glassEffect(.regular.tint(.blue).interactive(), in: .rect(cornerRadius: 14))
+                .accessibilityLabel("Get started with the app")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
         }
         .padding(32)
     }

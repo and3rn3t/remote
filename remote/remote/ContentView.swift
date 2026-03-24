@@ -164,6 +164,7 @@ struct ReceiverRowView: View {
             Image(systemName: receiver.isFavorite ? "star.fill" : "hifispeaker.2")
                 .foregroundStyle(receiver.isFavorite ? .yellow : .secondary)
                 .font(.title2)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(receiver.name)
@@ -195,6 +196,19 @@ struct ReceiverRowView: View {
                     .foregroundStyle(.tertiary)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(receiverAccessibilityLabel)
+    }
+
+    private var receiverAccessibilityLabel: String {
+        var parts = [receiver.name, receiver.ipAddress]
+        if receiver.isFavorite { parts.append("Favorite") }
+        if let lastConnected = receiver.lastConnected {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .full
+            parts.append("Last connected \(formatter.localizedString(for: lastConnected, relativeTo: Date()))")
+        }
+        return parts.joined(separator: ", ")
     }
 }
 

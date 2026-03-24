@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A1628"/>
+      <stop offset="100%" stop-color="#060E1A"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#5BABF7"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Power symbol ring -->
+  <circle cx="512" cy="480" r="200" fill="none" stroke="url(#glow)" stroke-width="36" stroke-linecap="round"
+          stroke-dasharray="1005" stroke-dashoffset="157"/>
+  <!-- Power symbol line -->
+  <line x1="512" y1="300" x2="512" y2="440" stroke="url(#glow)" stroke-width="36" stroke-linecap="round"/>
+
+  <!-- Sound waves - left -->
+  <path d="M260 420 Q220 480 260 540" fill="none" stroke="#5BABF7" stroke-width="20" stroke-linecap="round" opacity="0.7"/>
+  <path d="M210 380 Q150 480 210 580" fill="none" stroke="#5BABF7" stroke-width="18" stroke-linecap="round" opacity="0.45"/>
+  <path d="M165 345 Q90 480 165 615" fill="none" stroke="#5BABF7" stroke-width="16" stroke-linecap="round" opacity="0.25"/>
+
+  <!-- Sound waves - right -->
+  <path d="M764 420 Q804 480 764 540" fill="none" stroke="#5BABF7" stroke-width="20" stroke-linecap="round" opacity="0.7"/>
+  <path d="M814 380 Q874 480 814 580" fill="none" stroke="#5BABF7" stroke-width="18" stroke-linecap="round" opacity="0.45"/>
+  <path d="M859 345 Q934 480 859 615" fill="none" stroke="#5BABF7" stroke-width="16" stroke-linecap="round" opacity="0.25"/>
+
+  <!-- App name -->
+  <text x="512" y="770" text-anchor="middle" font-family="-apple-system, SF Pro Display, Helvetica Neue, Arial, sans-serif"
+        font-size="80" font-weight="600" fill="#FFFFFF" letter-spacing="8">REMOTE</text>
+  <text x="512" y="820" text-anchor="middle" font-family="-apple-system, SF Pro Text, Helvetica Neue, Arial, sans-serif"
+        font-size="36" font-weight="400" fill="#7EB8F5" letter-spacing="4">DENON</text>
+</svg>

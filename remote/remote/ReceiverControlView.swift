@@ -149,10 +149,12 @@ struct ReceiverControlView: View {
                     Image(systemName: "power")
                         .font(.title3)
                         .foregroundStyle(api.state.isPowerOn ? .green : .secondary)
+                        .contentTransition(.symbolEffect(.replace))
 
                     Text(api.state.isPowerOn ? "On" : "Standby")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
 
                     Spacer()
 
@@ -160,7 +162,9 @@ struct ReceiverControlView: View {
                         get: { api.state.isPowerOn },
                         set: { newValue in
                             playHaptic()
-                            apiAction { try await api.setPower(newValue) }
+                            withAnimation(.smooth(duration: 0.3)) {
+                                apiAction { try await api.setPower(newValue) }
+                            }
                         }
                     ))
                     .labelsHidden()
@@ -175,6 +179,7 @@ struct ReceiverControlView: View {
                     Image(systemName: api.state.isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill")
                         .font(.title2)
                         .foregroundStyle(api.state.isMuted ? .red : .blue)
+                        .contentTransition(.symbolEffect(.replace))
 
                     Text("Volume")
                         .font(.headline)
@@ -184,6 +189,8 @@ struct ReceiverControlView: View {
                     Text("\(api.state.volume)")
                         .font(.title2.bold())
                         .foregroundStyle(.primary)
+                        .contentTransition(.numericText())
+                        .animation(.snappy(duration: 0.2), value: api.state.volume)
                 }
 
                 // Volume slider
@@ -230,11 +237,14 @@ struct ReceiverControlView: View {
 
                     Button {
                         playHaptic(.light)
-                        apiAction { try await api.setMute(!api.state.isMuted) }
+                        withAnimation(.smooth(duration: 0.25)) {
+                            apiAction { try await api.setMute(!api.state.isMuted) }
+                        }
                     } label: {
                         Label("Mute", systemImage: api.state.isMuted ? "speaker.slash.fill" : "speaker.fill")
                             .labelStyle(.iconOnly)
                             .font(.title3)
+                            .contentTransition(.symbolEffect(.replace))
                     }
                     .buttonStyle(.glassProminent)
                     .glassEffect(.regular.tint(api.state.isMuted ? .red : .blue).interactive(), in: .rect(cornerRadius: 12))
@@ -506,12 +516,14 @@ struct ReceiverControlView: View {
             )
             .font(.subheadline)
             .foregroundStyle(.secondary)
+            .contentTransition(.symbolEffect(.replace))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
         }
         .buttonStyle(.glass)
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
         .accessibilityLabel(showSecondaryControls ? "Collapse secondary controls" : "Expand secondary controls")
+        .accessibilityHint(showSecondaryControls ? "Hides surround mode, tone, sleep and scene controls" : "Shows surround mode, tone, sleep and scene controls")
     }
 
     // MARK: - Zone Picker
