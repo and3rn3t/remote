@@ -45,6 +45,7 @@ struct ContentView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
+        .background(Color(.systemBackground))
     }
 
     // MARK: - Receivers List
@@ -368,7 +369,7 @@ struct AddReceiverView: View {
     private func addDiscoveredReceiver(_ discovered: DiscoveredReceiver) {
         // Check for duplicates before adding
         let isDuplicate = existingReceivers.contains {
-            $0.ipAddress == discovered.host && $0.port == discovered.port
+            $0.ipAddress == discovered.host && $0.port == DenonConstants.defaultPort
         }
         guard !isDuplicate else { return }
 
@@ -376,7 +377,7 @@ struct AddReceiverView: View {
             let receiver = DenonReceiver(
                 name: discovered.name,
                 ipAddress: discovered.host,
-                port: discovered.port
+                port: DenonConstants.defaultPort
             )
             modelContext.insert(receiver)
             dismiss()

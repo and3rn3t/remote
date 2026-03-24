@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Network
 import Observation
 import SharedModels
 import WidgetKit
@@ -155,15 +156,16 @@ final class DenonAPI {
     var currentReconnectAttempt = 0
 
     private var receiver: DenonReceiver?
-    private var inputStream: InputStream?
-    private var outputStream: OutputStream?
+    private var connection: NWConnection?
     private var readBuffer = [UInt8](repeating: 0, count: DenonConstants.readBufferSize)
-    private var connectionMonitorTask: Task<Void, Never>?
+    private var receiveBuffer = Data()
+    private var receiveTask: Task<Void, Never>?
     private var reconnectAttempts = 0
     private let logger = ConnectionLogger.shared
     private let liveActivity = LiveActivityManager.shared
     private var updateCoalesceTask: Task<Void, Never>?
     private var lastCommandTime: ContinuousClock.Instant?
+    private let tcpQueue = DispatchQueue(label: "dev.andernet.remote.tcp")
 
     /// Timeout for establishing a TCP connection, in seconds (default: 5.0).
     var connectionTimeout: TimeInterval = DenonConstants.connectionTimeout
@@ -194,102 +196,150 @@ final class DenonAPI {
     }
 
     private func establishConnection(to receiver: DenonReceiver) async throws {
-        // Open TCP connection to receiver
-        var readStream: Unmanaged<CFReadStream>?
-        var writeStream: Unmanaged<CFWriteStream>?
-
-        CFStreamCreatePairWithSocketToHost(
-            kCFAllocatorDefault,
-            receiver.ipAddress as CFString,
-            UInt32(receiver.port),
-            &readStream,
-            &writeStream
+        let nwConnection = NWConnection(
+            host: NWEndpoint.Host(receiver.ipAddress),
+            port: NWEndpoint.Port(integerLiteral: UInt16(receiver.port)),
+            using: .tcp
         )
+        self.connection = nwConnection
 
-        guard let readStream = readStream?.takeRetainedValue(),
-              let writeStream = writeStream?.takeRetainedValue() else {
-            logger.log("Stream creation failed", category: .error)
-            throw DenonError.connectionFailed
-        }
-
-        inputStream = readStream as InputStream
-        outputStream = writeStream as OutputStream
-
-        inputStream?.open()
-        outputStream?.open()
-
-        // Wait for streams to open with timeout
-        let deadline = Date().addingTimeInterval(connectionTimeout)
-        while Date() < deadline {
-            if inputStream?.streamStatus == .open && outputStream?.streamStatus == .open {
-                break
+        // Await the connection reaching .ready (or failing) with a timeout.
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+                    let flag = OnceFlag()
+                    nwConnection.stateUpdateHandler = { @Sendable state in
+                        switch state {
+                        case .ready:
+                            flag.runOnce { cont.resume() }
+                        case .failed(let error):
+                            flag.runOnce { cont.resume(throwing: error) }
+                        case .cancelled:
+                            flag.runOnce { cont.resume(throwing: DenonError.connectionRefused) }
+                        default:
+                            break
+                        }
+                    }
+                    nwConnection.start(queue: self.tcpQueue)
+                }
             }
-            if inputStream?.streamStatus == .error || outputStream?.streamStatus == .error {
-                cleanupStreams()
-                logger.log("Connection refused — stream error", category: .error)
-                throw DenonError.connectionRefused
+            group.addTask {
+                try await Task.sleep(for: .seconds(self.connectionTimeout))
+                throw DenonError.connectionTimeout
             }
-            try await Task.sleep(for: .milliseconds(DenonConstants.connectionPollIntervalMilliseconds))
-        }
-
-        // Check if connection succeeded
-        guard inputStream?.streamStatus == .open && outputStream?.streamStatus == .open else {
-            cleanupStreams()
-            logger.log("Connection timed out after \(connectionTimeout)s", category: .error)
-            throw DenonError.connectionTimeout
+            // First to finish (success or failure) wins; cancel the other.
+            do {
+                try await group.next()
+                group.cancelAll()
+            } catch {
+                group.cancelAll()
+                nwConnection.cancel()
+                self.connection = nil
+                throw error
+            }
         }
 
         isConnected = true
         errorMessage = nil
         logger.log("Connected successfully", category: .connection)
 
-        // Start monitoring connection health
-        startConnectionMonitor()
+        // Install the post-connection state handler to detect unexpected disconnects.
+        // This replaces the setup-phase handler used above to await .ready.
+        nwConnection.stateUpdateHandler = { @Sendable [weak self] state in
+            Task { @MainActor [weak self] in
+                guard let self, self.isConnected else { return }
+                switch state {
+                case .failed(let error):
+                    self.isConnected = false
+                    self.errorMessage = error.localizedDescription
+                    self.logger.log("Connection lost: \(error.localizedDescription)", category: .error)
+                    await self.attemptReconnect()
+                case .cancelled:
+                    // Cancellation is expected on user-initiated disconnect; ignore.
+                    break
+                default:
+                    break
+                }
+            }
+        }
 
-        // Query initial state
-        try await refreshState()
+        // Start continuous receive loop
+        startReceiving()
+
+        // Brief settle delay before first command
+        try? await Task.sleep(for: .milliseconds(DenonConstants.postStepDelayMilliseconds))
+
+        // Initial state refresh; failure is non-fatal — TCP is already established.
+        do {
+            try await refreshState()
+        } catch {
+            logger.log("Initial state refresh failed (non-fatal): \(error.localizedDescription)", category: .error)
+        }
     }
 
     func disconnect() {
         logger.log("Disconnecting", category: .connection)
-        connectionMonitorTask?.cancel()
-        connectionMonitorTask = nil
-        cleanupStreams()
+        receiveTask?.cancel()
+        receiveTask = nil
+        connection?.cancel()
+        connection = nil
         isConnected = false
         reconnectAttempts = 0
+        receiveBuffer.removeAll()
         liveActivity.end()
     }
 
-    private func cleanupStreams() {
-        inputStream?.close()
-        outputStream?.close()
-        inputStream = nil
-        outputStream = nil
+    private func cleanupConnection() {
+        receiveTask?.cancel()
+        receiveTask = nil
+        connection?.cancel()
+        connection = nil
+        receiveBuffer.removeAll()
     }
 
     // MARK: - Connection Monitoring & Reconnection
 
-    private func startConnectionMonitor() {
-        connectionMonitorTask?.cancel()
-        connectionMonitorTask = Task { [weak self] in
+    private func startReceiving() {
+        receiveTask?.cancel()
+        receiveTask = Task { [weak self] in
+            guard let self, let connection = self.connection else { return }
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(DenonConstants.connectionMonitorIntervalSeconds))
-                guard !Task.isCancelled else { return }
-
-                guard let self else { return }
-
-                // Check if streams are still healthy
-                let inputOk = self.inputStream?.streamStatus == .open
-                let outputOk = self.outputStream?.streamStatus == .open
-
-                if self.isConnected && (!inputOk || !outputOk) {
-                    self.isConnected = false
-                    self.errorMessage = DenonError.disconnected.localizedDescription
-                    self.logger.log("Connection lost — streams unhealthy", category: .error)
-                    await self.attemptReconnect()
+                var shouldStop = false
+                await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+                    connection.receive(minimumIncompleteLength: 1, maximumLength: DenonConstants.readBufferSize) { @Sendable [weak self] data, _, isComplete, error in
+                        Task { @MainActor [weak self] in
+                            guard let self else { cont.resume(); return }
+                            if let data, !data.isEmpty {
+                                self.receiveBuffer.append(data)
+                                self.drainReceiveBuffer()
+                            }
+                            if let error {
+                                self.logger.log("Receive error: \(error.localizedDescription)", category: .error)
+                            }
+                            if isComplete {
+                                // TCP stream ended cleanly; stateUpdateHandler will fire .failed/.cancelled
+                                shouldStop = true
+                            }
+                            cont.resume()
+                        }
+                    }
                 }
+                if shouldStop || Task.isCancelled { break }
             }
         }
+    }
+
+    /// Parses all complete `\r`-terminated lines out of `receiveBuffer`.
+    private func drainReceiveBuffer() {
+        while let crIndex = receiveBuffer.firstIndex(of: UInt8(ascii: "\r")) {
+            let lineData = receiveBuffer[receiveBuffer.startIndex..<crIndex]
+            if let line = String(bytes: lineData, encoding: .utf8), !line.isEmpty {
+                logger.log("RX: \(line)", category: .response)
+                parseResponse(line)
+            }
+            receiveBuffer.removeSubrange(receiveBuffer.startIndex...crIndex)
+        }
+        scheduleCoalescedUpdate()
     }
 
     private func attemptReconnect() async {
@@ -315,7 +365,7 @@ final class DenonAPI {
             return
         }
 
-        cleanupStreams()
+        cleanupConnection()
 
         do {
             try await establishConnection(to: receiver)
@@ -334,7 +384,7 @@ final class DenonAPI {
     // MARK: - Command Sending
 
     private func sendCommand(_ command: String) async throws {
-        guard isConnected, let outputStream = outputStream else {
+        guard isConnected, let connection else {
             throw DenonError.notConnected
         }
 
@@ -347,14 +397,18 @@ final class DenonAPI {
             }
         }
 
-        let commandString = "\(command)\r"
-        let data = Array(commandString.utf8)
-
+        let data = Data("\(command)\r".utf8)
         logger.log("TX: \(command)", category: .command)
-        let bytesWritten = outputStream.write(data, maxLength: data.count)
 
-        if bytesWritten < 0 {
-            throw DenonError.commandFailed
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            let flag = OnceFlag()
+            connection.send(content: data, completion: .contentProcessed { @Sendable error in
+                if let error {
+                    flag.runOnce { cont.resume(throwing: error) }
+                } else {
+                    flag.runOnce { cont.resume() }
+                }
+            })
         }
 
         lastCommandTime = .now
@@ -377,24 +431,12 @@ final class DenonAPI {
         try await sendCommand("PSDYNVOL ?")
         try await sendCommand("PSDYNEQ ?")
 
-        // Read responses
+        // Allow time for responses to arrive and be processed by the receive loop
         try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
-        readResponses()
     }
 
     private func readResponses() {
-        guard let inputStream = inputStream else { return }
-
-        while inputStream.hasBytesAvailable {
-            let bytesRead = inputStream.read(&readBuffer, maxLength: readBuffer.count)
-            if bytesRead > 0 {
-                if let response = String(bytes: readBuffer[..<bytesRead], encoding: .utf8) {
-                    logger.log("RX: \(response.replacingOccurrences(of: "\r", with: " | ").trimmingCharacters(in: .whitespaces))", category: .response)
-                    parseResponse(response)
-                }
-            }
-        }
-        scheduleCoalescedUpdate()
+        // No-op: responses are now handled continuously by startReceiving() / drainReceiveBuffer()
     }
 
     /// Batches widget and live activity updates so rapid responses don't trigger excessive reloads.
@@ -861,5 +903,20 @@ enum DenonError: LocalizedError {
         case .commandFailed:
             return "The command could not be sent. Try again or reconnect."
         }
+    }
+}
+
+// MARK: - OnceFlag
+
+/// Ensures a closure is only executed once, safe to call from multiple concurrency contexts.
+private final class OnceFlag: @unchecked Sendable {
+    private var _done = false
+    private let nslock = NSLock()
+    nonisolated func runOnce(_ action: () -> Void) {
+        nslock.lock()
+        let should = !_done
+        if should { _done = true }
+        nslock.unlock()
+        if should { action() }
     }
 }

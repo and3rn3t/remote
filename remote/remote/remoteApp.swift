@@ -40,14 +40,28 @@ struct remoteApp: App {
             cloudKitDatabase: .automatic
         )
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            // Fall back to in-memory store so the app remains usable
-            let fallback = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-            // swiftlint:disable:next force_try
-            return try! ModelContainer(for: schema, configurations: [fallback])
+        // Tier 1: CloudKit sync
+        if let container = try? ModelContainer(for: schema, configurations: [modelConfiguration]) {
+            return container
         }
+
+        // Tier 2: Local-only persistence (CloudKit unavailable — e.g. not signed in,
+        // container not set up in CloudKit Dashboard, or no network at launch)
+        let localConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .none
+        )
+        if let container = try? ModelContainer(for: schema, configurations: [localConfiguration]) {
+            return container
+        }
+
+        // Tier 3: In-memory fallback (data won't persist, but app stays usable)
+        // swiftlint:disable:next force_try
+        return try! ModelContainer(
+            for: schema,
+            configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]
+        )
     }()
 
     var body: some Scene {

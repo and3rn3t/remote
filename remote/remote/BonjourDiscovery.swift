@@ -139,9 +139,13 @@ final class BonjourDiscovery {
             switch state {
             case .ready:
                 if let innerEndpoint = connection.currentPath?.remoteEndpoint,
-                   case .hostPort(let host, let port) = innerEndpoint {
-                    let hostStr = "\(host)"
-                    let portInt = Int(port.rawValue)
+                   case .hostPort(let host, _) = innerEndpoint {
+                    // Strip any interface zone ID (e.g. "192.168.1.138%en0" → "192.168.1.138")
+                    let rawHost = "\(host)"
+                    let hostStr = rawHost.components(separatedBy: "%").first ?? rawHost
+                    // Denon AVR telnet control is always on port 23, regardless of
+                    // which Bonjour service (HTTP/80 or _denon._tcp) led us here.
+                    let portInt = DenonConstants.defaultPort
 
                     Task { @MainActor in
                         // Deduplicate by host

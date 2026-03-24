@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    @Environment(\.dismiss) private var dismiss
     @State private var currentPage = 0
     var onComplete: () -> Void
 
@@ -118,7 +117,6 @@ struct OnboardingView: View {
             Button {
                 AppSettings.hasCompletedOnboarding = true
                 onComplete()
-                dismiss()
             } label: {
                 Text("Get Started")
                     .frame(maxWidth: .infinity)

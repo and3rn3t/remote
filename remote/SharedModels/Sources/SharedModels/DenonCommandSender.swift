@@ -49,9 +49,10 @@ public enum DenonCommandSender {
 }
 
 /// Ensures a continuation is only resumed once, even with multiple callbacks.
-final class ContinuationGuard: Sendable {
+public final class ContinuationGuard: Sendable {
     private let lock = OSAllocatedUnfairLock(initialState: false)
-    func resumeOnce(_ action: () -> Void) {
+    public init() {}
+    public func resumeOnce(_ action: () -> Void) {
         let shouldResume = lock.withLock { alreadyResumed -> Bool in
             guard !alreadyResumed else { return false }
             alreadyResumed = true
