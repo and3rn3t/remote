@@ -66,7 +66,7 @@ struct DynamicSettingsView: View {
                                         .font(.caption)
                                         .foregroundStyle(api.state.dynamicVolume == option.code ? .white : .primary)
                                         .frame(maxWidth: .infinity)
-                                        .padding(.vertical, Design.spacingSM)
+                                        .padding(.vertical, Design.spacingMD)
                                 }
                                 .buttonStyle(.plain)
                                 .glassEffect(

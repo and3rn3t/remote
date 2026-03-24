@@ -96,7 +96,7 @@ struct NowPlayingView: View {
         } label: {
             Image(systemName: systemImage)
                 .font(.title2)
-                .frame(width: 48, height: 48)
+                .frame(width: Design.circleButtonSize, height: Design.circleButtonSize)
         }
         .buttonStyle(.glass)
         .glassEffect(.regular.interactive(), in: .circle)

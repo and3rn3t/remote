@@ -279,13 +279,15 @@ struct SaveSceneView: View {
     }
 
     private var quickPresetButtons: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: Design.gridMinMedium))], spacing: Design.spacingSM) {
-            presetButton("Movie Night", icon: "film.fill")
-            presetButton("Music", icon: "music.note")
-            presetButton("Party", icon: "party.popper.fill")
-            presetButton("Gaming", icon: "gamecontroller.fill")
-            presetButton("Late Night", icon: "moon.fill")
-            presetButton("Morning", icon: "sunrise.fill")
+        GlassEffectContainer(spacing: Design.spacingSM) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: Design.gridMinMedium))], spacing: Design.spacingSM) {
+                presetButton("Movie Night", icon: "film.fill")
+                presetButton("Music", icon: "music.note")
+                presetButton("Party", icon: "party.popper.fill")
+                presetButton("Gaming", icon: "gamecontroller.fill")
+                presetButton("Late Night", icon: "moon.fill")
+                presetButton("Morning", icon: "sunrise.fill")
+            }
         }
     }
 
@@ -298,12 +300,18 @@ struct SaveSceneView: View {
                     .font(.title3)
                 Text(name)
                     .font(.caption)
+                    .foregroundStyle(sceneName == name ? .white : .primary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, Design.spacingSM)
+            .padding(.vertical, Design.spacingMD)
         }
-        .buttonStyle(.bordered)
-        .tint(sceneName == name ? .blue : .secondary)
+        .buttonStyle(.plain)
+        .glassEffect(
+            sceneName == name ?
+                .regular.tint(.blue).interactive() :
+                .regular.interactive(),
+            in: .rect(cornerRadius: Design.cornerRadius)
+        )
     }
 
     private func saveScene() {

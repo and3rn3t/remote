@@ -111,7 +111,8 @@ struct ZoneControlView: View {
                         } label: {
                             Label("Volume Down", systemImage: "minus.circle.fill")
                                 .labelStyle(.iconOnly)
-                                .font(.title)
+                                .font(.title2)
+                                .frame(width: Design.circleButtonSize, height: Design.circleButtonSize)
                         }
                         .buttonStyle(.glass)
                         .glassEffect(.regular.interactive(), in: .circle)
@@ -135,7 +136,8 @@ struct ZoneControlView: View {
                         } label: {
                             Label("Volume Up", systemImage: "plus.circle.fill")
                                 .labelStyle(.iconOnly)
-                                .font(.title)
+                                .font(.title2)
+                                .frame(width: Design.circleButtonSize, height: Design.circleButtonSize)
                         }
                         .buttonStyle(.glass)
                         .glassEffect(.regular.interactive(), in: .circle)

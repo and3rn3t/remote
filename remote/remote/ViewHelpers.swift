@@ -33,6 +33,9 @@ enum Design {
     static let gridMinSmall: CGFloat = 80
     static let gridMinMedium: CGFloat = 100
     static let gridMinLarge: CGFloat = 120
+
+    // Button dimensions
+    static let circleButtonSize: CGFloat = 48
 }
 
 // MARK: - Shared Haptic Feedback
