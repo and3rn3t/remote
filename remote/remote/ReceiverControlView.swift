@@ -124,6 +124,10 @@ struct ReceiverControlView: View {
                             api.errorMessage = errorMsg
                             showingError = true
                         }
+                        SystemSettingsView(api: api) { errorMsg in
+                            api.errorMessage = errorMsg
+                            showingError = true
+                        }
                         sleepTimerSection
                         scenesSection
                     }

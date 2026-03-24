@@ -41,6 +41,14 @@ enum DenonConstants {
         if db < 0 { return "\(db) dB" }
         return "0 dB"
     }
+
+    /// Converts raw subwoofer level (38–62) to a dB label relative to center (50 = 0 dB).
+    static func subwooferLabel(_ value: Int) -> String {
+        let db = value - 50
+        if db > 0 { return "+\(db) dB" }
+        if db < 0 { return "\(db) dB" }
+        return "0 dB"
+    }
 }
 
 // MARK: - Input Sources
@@ -137,5 +145,104 @@ enum DenonSleepTimer {
         ("60 min", "060"),
         ("90 min", "090"),
         ("120 min", "120"),
+    ]
+}
+
+// MARK: - Dialogue Enhancer Options
+
+enum DenonDialogueEnhancer {
+    static let options: [(name: String, code: String)] = [
+        ("Off", "OFF"),
+        ("Low", "LOW"),
+        ("Medium", "MED"),
+        ("High", "HI"),
+    ]
+}
+
+// MARK: - Audyssey MultEQ Options
+
+enum DenonMultEQ {
+    static let options: [(name: String, code: String)] = [
+        ("Off", "OFF"),
+        ("Reference", "REFERENCE"),
+        ("L1 (Byp.)", "L1"),
+        ("L2 (Flat)", "L2"),
+        ("Flat", "FLAT"),
+    ]
+}
+
+// MARK: - Night Mode Options
+
+enum DenonNightMode {
+    static let options: [(name: String, code: String)] = [
+        ("Off", "OFF"),
+        ("Low", "LOW"),
+        ("Mid", "MID"),
+        ("High", "HI"),
+    ]
+}
+
+// MARK: - Dimmer Options
+
+enum DenonDimmer {
+    static let options: [(name: String, code: String)] = [
+        ("Bright", "BRI"),
+        ("Dim", "DIM"),
+        ("Dark", "DAR"),
+        ("Off", "OFF"),
+    ]
+}
+
+// MARK: - ECO Mode Options
+
+enum DenonEcoMode {
+    static let options: [(name: String, code: String)] = [
+        ("Off", "OFF"),
+        ("On", "ON"),
+        ("Auto", "AUTO"),
+    ]
+}
+
+// MARK: - Auto Standby Options
+
+enum DenonAutoStandby {
+    static let options: [(name: String, code: String)] = [
+        ("Off", "OFF"),
+        ("15 min", "15M"),
+        ("30 min", "30M"),
+        ("60 min", "60M"),
+    ]
+}
+
+// MARK: - HDMI Monitor Output Options
+
+enum DenonHDMIMonitor {
+    static let options: [(name: String, code: String)] = [
+        ("Auto", "AUTO"),
+        ("HDMI 1", "1"),
+        ("HDMI 2", "2"),
+    ]
+}
+
+// MARK: - HDMI Resolution Options
+
+enum DenonHDMIResolution {
+    static let options: [(name: String, code: String)] = [
+        ("Auto", "AUTO"),
+        ("480p", "48P"),
+        ("1080i", "10I"),
+        ("720p", "72P"),
+        ("1080p", "10P"),
+        ("1080p:24Hz", "10P6"),
+        ("4K", "4KF"),
+    ]
+}
+
+// MARK: - Video Aspect Ratio Options
+
+enum DenonVideoAspect {
+    static let options: [(name: String, code: String)] = [
+        ("Normal", "NRM"),
+        ("Full", "FUL"),
     ]
 }

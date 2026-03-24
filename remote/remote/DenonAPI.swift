@@ -103,6 +103,51 @@ struct DenonState {
     /// Whether Dynamic EQ is enabled.
     var dynamicEQ: Bool = false
 
+    /// Dialogue Enhancer level: "OFF", "LOW", "MED", or "HI".
+    var dialogueEnhancer: String = "OFF"
+
+    /// Subwoofer level (38-62, where 50 = 0 dB, ±12 dB range).
+    var subwooferLevel: Int = 50
+
+    /// LFE level (0-10, representing 0 to -10 dB).
+    var lfeLevel: Int = 0
+
+    /// Audyssey MultEQ mode: "OFF", "REFERENCE", "L1", "L2", or "FLAT".
+    var multEQ: String = "OFF"
+
+    /// Whether Cinema EQ is enabled.
+    var cinemaEQ: Bool = false
+
+    /// Whether Tone Defeat is enabled (bypasses bass/treble).
+    var toneDefeat: Bool = false
+
+    /// Night mode: "OFF", "LOW", "MID", or "HI".
+    var nightMode: String = "OFF"
+
+    /// Front panel dimmer: "BRI", "DIM", "DAR", or "OFF".
+    var dimmer: String = "BRI"
+
+    /// ECO mode: "ON", "OFF", or "AUTO".
+    var ecoMode: String = "OFF"
+
+    /// Auto standby: "OFF", "15M", "30M", or "60M".
+    var autoStandby: String = "OFF"
+
+    /// HDMI monitor output: "AUTO", "1", or "2".
+    var hdmiMonitor: String = "AUTO"
+
+    /// HDMI video resolution output mode.
+    var hdmiResolution: String = "AUTO"
+
+    /// Video aspect ratio: "NRM" or "FUL".
+    var videoAspect: String = "NRM"
+
+    /// Whether All-Zone Stereo is enabled.
+    var allZoneStereo: Bool = false
+
+    /// Audio signal format info (e.g., "Dolby TrueHD", "DTS-HD MA").
+    var signalInfo: String = ""
+
     /// Receiver model name (if queried).
     var receiverModel: String = ""
 
@@ -439,6 +484,21 @@ final class DenonAPI {
         try await sendCommand("PSTRE ?")
         try await sendCommand("PSDYNVOL ?")
         try await sendCommand("PSDYNEQ ?")
+        try await sendCommand("PSDEH ?")
+        try await sendCommand("PSSWL ?")
+        try await sendCommand("PSLFE ?")
+        try await sendCommand("PSMULTEQ: ?")
+        try await sendCommand("PSCINEMA EQ. ?")
+        try await sendCommand("PSTONE CTRL ?")
+        try await sendCommand("PSNIGHT ?")
+        try await sendCommand("DIM ?")
+        try await sendCommand("ECO?")
+        try await sendCommand("STBY?")
+        try await sendCommand("VSMONI ?")
+        try await sendCommand("VSSC ?")
+        try await sendCommand("VSASP ?")
+        try await sendCommand("MNZST ?")
+        try await sendCommand("SSINFAISSIG ?")
         try await sendCommand("SSFUN ?")
 
         // Allow time for responses to arrive and be processed by the receive loop
@@ -518,9 +578,30 @@ final class DenonAPI {
             else if trimmed.hasPrefix("SLP") {
                 parseSleepTimerResponse(trimmed)
             }
-            // Parameter Settings (tone, dynamic volume/EQ)
+            // Parameter Settings (tone, dynamic volume/EQ, dialogue enhancer, etc.)
             else if trimmed.hasPrefix("PS") {
                 parseParameterResponse(trimmed)
+            }
+            // Display Dimmer
+            else if trimmed.hasPrefix("DIM ") {
+                state.dimmer = trimmed.replacingOccurrences(of: "DIM ", with: "")
+            }
+            // ECO Mode
+            else if trimmed.hasPrefix("ECO") && !trimmed.hasPrefix("ECONO") {
+                state.ecoMode = trimmed.replacingOccurrences(of: "ECO", with: "")
+            }
+            // Auto Standby
+            else if trimmed.hasPrefix("STBY") {
+                state.autoStandby = trimmed.replacingOccurrences(of: "STBY", with: "")
+            }
+            // Video Settings (HDMI monitor, resolution, aspect)
+            else if trimmed.hasPrefix("VS") {
+                parseVideoResponse(trimmed)
+            }
+            // All-Zone Stereo
+            else if trimmed.hasPrefix("MNZST") {
+                let value = trimmed.replacingOccurrences(of: "MNZST ", with: "")
+                state.allZoneStereo = (value == "ON")
             }
             // Receiver Info
             else if trimmed.hasPrefix("SSINFAI") {
@@ -617,15 +698,51 @@ final class DenonAPI {
         } else if line.hasPrefix("PSDYNEQ") {
             let value = line.replacingOccurrences(of: "PSDYNEQ ", with: "")
             state.dynamicEQ = (value == "ON")
+        } else if line.hasPrefix("PSDEH") {
+            let value = line.replacingOccurrences(of: "PSDEH ", with: "")
+            state.dialogueEnhancer = value
+        } else if line.hasPrefix("PSSWL") {
+            let value = line.replacingOccurrences(of: "PSSWL ", with: "")
+            if let level = Int(value) {
+                state.subwooferLevel = level
+            }
+        } else if line.hasPrefix("PSLFE") {
+            let value = line.replacingOccurrences(of: "PSLFE ", with: "")
+            if let level = Int(value) {
+                state.lfeLevel = level
+            }
+        } else if line.hasPrefix("PSMULTEQ:") {
+            let value = line.replacingOccurrences(of: "PSMULTEQ:", with: "")
+            state.multEQ = value
+        } else if line.hasPrefix("PSCINEMA EQ.") {
+            let value = line.replacingOccurrences(of: "PSCINEMA EQ.", with: "")
+            state.cinemaEQ = (value == "ON")
+        } else if line.hasPrefix("PSTONE CTRL") {
+            let value = line.replacingOccurrences(of: "PSTONE CTRL ", with: "")
+            state.toneDefeat = (value == "ON")
+        } else if line.hasPrefix("PSNIGHT") {
+            let value = line.replacingOccurrences(of: "PSNIGHT ", with: "")
+            state.nightMode = value
         }
     }
 
     private func parseReceiverInfoResponse(_ line: String) {
-        // SSINFAISMD <model> or SSINFAISFSV <firmware>
         if line.hasPrefix("SSINFAISMD ") {
             state.receiverModel = line.replacingOccurrences(of: "SSINFAISMD ", with: "")
         } else if line.hasPrefix("SSINFAISFSV ") {
             state.firmwareVersion = line.replacingOccurrences(of: "SSINFAISFSV ", with: "")
+        } else if line.hasPrefix("SSINFAISSIG ") {
+            state.signalInfo = line.replacingOccurrences(of: "SSINFAISSIG ", with: "")
+        }
+    }
+
+    private func parseVideoResponse(_ line: String) {
+        if line.hasPrefix("VSMONI") {
+            state.hdmiMonitor = line.replacingOccurrences(of: "VSMONI", with: "")
+        } else if line.hasPrefix("VSSC ") {
+            state.hdmiResolution = line.replacingOccurrences(of: "VSSC ", with: "")
+        } else if line.hasPrefix("VSASP ") {
+            state.videoAspect = line.replacingOccurrences(of: "VSASP ", with: "")
         }
     }
 
@@ -818,6 +935,114 @@ final class DenonAPI {
     func queryDynamicSettings() async throws {
         try await sendCommand("PSDYNVOL ?")
         try await sendCommand("PSDYNEQ ?")
+    }
+
+    // MARK: - Dialogue Enhancer
+
+    func setDialogueEnhancer(_ mode: String) async throws {
+        try await sendCommand("PSDEH \(mode)")
+        state.dialogueEnhancer = mode
+    }
+
+    // MARK: - Subwoofer Level
+
+    /// Set subwoofer level. Raw protocol value: 38 (-12 dB) to 62 (+12 dB), 50 = 0 dB.
+    func setSubwooferLevel(_ value: Int) async throws {
+        let clamped = min(max(value, 38), 62)
+        try await sendCommand("PSSWL \(String(format: "%02d", clamped))")
+        state.subwooferLevel = clamped
+    }
+
+    // MARK: - LFE Level
+
+    /// Set LFE level. Value 0 to 10, representing 0 dB to -10 dB.
+    func setLFELevel(_ value: Int) async throws {
+        let clamped = min(max(value, 0), 10)
+        try await sendCommand("PSLFE \(String(format: "%02d", clamped))")
+        state.lfeLevel = clamped
+    }
+
+    // MARK: - Audyssey MultEQ
+
+    func setMultEQ(_ mode: String) async throws {
+        try await sendCommand("PSMULTEQ:\(mode)")
+        state.multEQ = mode
+    }
+
+    // MARK: - Cinema EQ
+
+    func setCinemaEQ(_ enabled: Bool) async throws {
+        try await sendCommand("PSCINEMA EQ.\(enabled ? "ON" : "OFF")")
+        state.cinemaEQ = enabled
+    }
+
+    // MARK: - Tone Defeat
+
+    func setToneDefeat(_ enabled: Bool) async throws {
+        try await sendCommand("PSTONE CTRL \(enabled ? "ON" : "OFF")")
+        state.toneDefeat = enabled
+    }
+
+    // MARK: - Night Mode
+
+    func setNightMode(_ mode: String) async throws {
+        try await sendCommand("PSNIGHT \(mode)")
+        state.nightMode = mode
+    }
+
+    // MARK: - Display Dimmer
+
+    func setDimmer(_ mode: String) async throws {
+        try await sendCommand("DIM \(mode)")
+        state.dimmer = mode
+    }
+
+    // MARK: - ECO Mode
+
+    func setEcoMode(_ mode: String) async throws {
+        try await sendCommand("ECO\(mode)")
+        state.ecoMode = mode
+    }
+
+    // MARK: - Auto Standby
+
+    func setAutoStandby(_ mode: String) async throws {
+        try await sendCommand("STBY\(mode)")
+        state.autoStandby = mode
+    }
+
+    // MARK: - HDMI Monitor Output
+
+    func setHDMIMonitor(_ output: String) async throws {
+        try await sendCommand("VSMONI\(output)")
+        state.hdmiMonitor = output
+    }
+
+    // MARK: - HDMI Resolution
+
+    func setHDMIResolution(_ mode: String) async throws {
+        try await sendCommand("VSSC \(mode)")
+        state.hdmiResolution = mode
+    }
+
+    // MARK: - Video Aspect Ratio
+
+    func setVideoAspect(_ mode: String) async throws {
+        try await sendCommand("VSASP \(mode)")
+        state.videoAspect = mode
+    }
+
+    // MARK: - All-Zone Stereo
+
+    func setAllZoneStereo(_ enabled: Bool) async throws {
+        try await sendCommand("MNZST \(enabled ? "ON" : "OFF")")
+        state.allZoneStereo = enabled
+    }
+
+    // MARK: - Signal Info
+
+    func querySignalInfo() async throws {
+        try await sendCommand("SSINFAISSIG ?")
     }
 
     // MARK: - Tuner Presets
