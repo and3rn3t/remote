@@ -97,7 +97,7 @@ xcodebuild test \
   func myFunction(param: String) async throws -> Int { }
   ```
 
-- Keep `CLAUDE.md` updated with architectural changes
+- Keep `CLAUDE.md` (project root) updated with architectural changes
 - Update `ROADMAP.md` when completing features
 
 ## Architecture Guidelines
@@ -153,9 +153,9 @@ xcodebuild test \
    - Verify accessibility with VoiceOver enabled
 
 4. **Update documentation**
-   - Update `CHANGELOG.md` under `[Unreleased]`
+   - Update `docs/CHANGELOG.md` under `[Unreleased]`
    - Add DocC comments to new public APIs
-   - Update `ROADMAP.md` if completing roadmap items
+   - Update `docs/ROADMAP.md` if completing roadmap items
 
 5. **Commit with clear messages**
    ```bash

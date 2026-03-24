@@ -1,4 +1,5 @@
 # Project Improvements Summary
+
 **Date:** March 8, 2026  
 **Scope:** Immediate → Medium-term roadmap items
 
@@ -34,20 +35,20 @@
 
 ### Short-term Enhancements (1-2 hours)
 
-5. **Added Swift DocC Comments**
+1. **Added Swift DocC Comments**
    - Enhanced documentation for `DenonAPI` class
    - Added detailed comments to `DenonState` struct
    - Documented `ZoneState` and `NowPlayingInfo`
    - Usage examples and thread safety notes
    - Parameter descriptions for all public properties
 
-6. **Set Up Screenshots Infrastructure**
+2. **Set Up Screenshots Infrastructure**
    - Created `screenshots/` directory
    - Updated README.md with screenshot table
    - Instructions for capturing and adding screenshots
    - 5 key screens: List, Control, Now Playing, Zones, Settings
 
-7. **Documentation Improvements**
+3. **Documentation Improvements**
    - Clear architecture guidelines in CONTRIBUTING.md
    - Protocol documentation with command examples
    - Data flow explanation (DenonAPI → App Group → Widgets)
@@ -57,14 +58,14 @@
 
 ### Medium-term Features (half day)
 
-8. **Accessibility Support (AccessibilitySupport.swift)**
+1. **Accessibility Support (AccessibilitySupport.swift)**
    - **Dynamic Type:** `AdaptiveButtonStyle` with larger tap targets for accessibility sizes
    - **Reduce Transparency:** `adaptiveGlassEffect()` modifier that switches to solid backgrounds
    - **Accessible Components:** `AccessibleSlider` with proper VoiceOver labels
    - **Environment-aware:** Reads `accessibilityReduceTransparency` and `dynamicTypeSize`
    - **Graceful Degradation:** Maintains visual hierarchy even without glass effects
 
-9. **Expanded UI Test Coverage (ReceiverControlUITests.swift)**
+2. **Expanded UI Test Coverage (ReceiverControlUITests.swift)**
    - **Zone Switching:** Test Main/Zone 2/Zone 3 navigation
    - **Input Selection:** Verify input source grid and button taps
    - **Volume Control:** Test slider, up/down buttons, mute toggle
@@ -75,7 +76,7 @@
    - **Accessibility:** Verify VoiceOver labels and Dynamic Type support
    - **Helper Methods:** Reusable `addTestReceiver()` for test setup
 
-10. **Release Automation (release.yml + RELEASE_SETUP.md)**
+3. **Release Automation (release.yml + RELEASE_SETUP.md)**
     - **Automatic TestFlight Uploads:** Triggered on version tags (e.g., `v1.0.0`)
     - **Certificate Management:** Secure keychain setup with base64-encoded certs
     - **Provisioning Profile:** Automatic profile installation
@@ -90,6 +91,7 @@
 ## 📊 Impact Summary
 
 ### Lines Changed
+
 - **10 files** created or modified
 - **1,246 insertions**, **20 deletions**
 - **7,148 bytes** in CONTRIBUTING.md
@@ -97,15 +99,18 @@
 - **9,096 bytes** in ReceiverControlUITests.swift
 
 ### Test Coverage
+
 - **Before:** 70+ unit tests, 1 UI test file
 - **After:** 70+ unit tests, 2 UI test files (10+ new UI test methods)
 - **Coverage reporting:** Now visible in CI pipeline
 
 ### Documentation
+
 - **Before:** README.md, ROADMAP.md, CLAUDE.md
 - **After:** + CHANGELOG.md, CONTRIBUTING.md, RELEASE_SETUP.md, enhanced DocC comments
 
 ### CI/CD
+
 - **Before:** Build + test + lint
 - **After:** + Coverage reporting + automated TestFlight releases
 
@@ -122,7 +127,7 @@
    - File names: `list.png`, `control.png`, `playing.png`, `zones.png`, `settings.png`
 
 2. **Configure Release Secrets** (when ready for App Store)
-   - Follow `.github/RELEASE_SETUP.md` step-by-step
+   - Follow `docs/RELEASE_SETUP.md` step-by-step
    - Add 8 required secrets to GitHub repository settings
    - Test with a pre-release tag (e.g., `v1.0.0-beta1`)
 
@@ -139,7 +144,8 @@
 
 ### When Ready for Production
 
-5. **Run Full UI Test Suite**
+1. **Run Full UI Test Suite**
+
    ```bash
    xcodebuild test \
      -project remote/remote.xcodeproj \
@@ -148,12 +154,13 @@
      CODE_SIGNING_ALLOWED=NO
    ```
 
-6. **Verify Coverage Threshold**
+2. **Verify Coverage Threshold**
    - Check CI coverage reports
    - Aim for 80%+ on core logic (DenonAPI, parsing)
    - UI coverage is secondary (harder to test)
 
-7. **Create First Release**
+3. **Create First Release**
+
    ```bash
    # Update version in Xcode project (1.0.0)
    git add .
@@ -161,6 +168,7 @@
    git tag v1.0.0
    git push origin main --tags
    ```
+
    - Release workflow will automatically build and upload to TestFlight
 
 ---
@@ -168,18 +176,23 @@
 ## 🎯 Roadmap Status
 
 ### Phase 1: Foundation & Project Hygiene ✅
+
 **Status:** Complete
 
 ### Phase 2: Production Hardening ✅
+
 **Status:** Complete (including accessibility)
 
 ### Phases 3-12: Features ✅
+
 **Status:** Complete
 
 ### Phase 13: Future Vision
+
 **Status:** Deferred (Mac/Watch apps out of scope)
 
 ### New: CI/CD & Release Automation ✅
+
 **Status:** Complete
 
 ---
@@ -219,7 +232,7 @@ IMPROVEMENTS_2026-03-08.md       # This file
 
 ## 🔗 Resources
 
-- **Repository:** https://github.com/and3rn3t/remote
+- **Repository:** <https://github.com/and3rn3t/remote>
 - **CI Status:** Check Actions tab for build/test/coverage
 - **Roadmap:** See `ROADMAP.md` for feature progress
 - **Issues:** Track bugs and features in GitHub Issues
@@ -229,6 +242,7 @@ IMPROVEMENTS_2026-03-08.md       # This file
 **All immediate and medium-term improvements complete!** 🎉
 
 The project is now ready for:
+
 - ✅ Expanded test coverage
 - ✅ Automated releases
 - ✅ Full accessibility support
