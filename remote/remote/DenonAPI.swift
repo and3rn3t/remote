@@ -118,7 +118,7 @@ struct DenonState {
 ///
 /// `DenonAPI` is the core TCP client that handles:
 /// - Connection establishment and automatic reconnection
-/// - Command sending with throttling (50ms minimum between commands)
+/// - Command sending with throttling (25ms minimum between commands)
 /// - Asynchronous response parsing from the receiver's protocol stream
 /// - State updates via Swift Observation (`@Observable`)
 /// - Integration with widgets, Live Activities, and connection logging
@@ -445,10 +445,6 @@ final class DenonAPI {
         try await Task.sleep(for: .milliseconds(DenonConstants.bulkQueryResponseDelayMilliseconds))
     }
 
-    private func readResponses() {
-        // No-op: responses are now handled continuously by startReceiving() / drainReceiveBuffer()
-    }
-
     /// Batches widget and live activity updates so rapid responses don't trigger excessive reloads.
     private func scheduleCoalescedUpdate() {
         updateCoalesceTask?.cancel()
@@ -493,17 +489,13 @@ final class DenonAPI {
         )
     }
 
-    private func parseResponse(_ response: String) {
-        parseResponseImpl(response)
-    }
-
     /// Parses a raw Denon protocol response string and updates state.
     /// Also used directly in unit tests.
     func parseResponseForTesting(_ response: String) {
-        parseResponseImpl(response)
+        parseResponse(response)
     }
 
-    private func parseResponseImpl(_ response: String) {
+    private func parseResponse(_ response: String) {
         let lines = response.components(separatedBy: "\r")
 
         for line in lines {
