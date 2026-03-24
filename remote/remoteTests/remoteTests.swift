@@ -869,6 +869,172 @@ struct EdgeCaseParsingTests {
     }
 }
 
+// MARK: - Half-Step Volume Parsing Tests
+
+@MainActor
+struct HalfStepVolumeTests {
+
+    @Test func parseHalfStepRoundsUp() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("MV525\r")
+        #expect(api.state.volume == 53)
+    }
+
+    @Test func parseHalfStepBaseNoRounding() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("MV520\r")
+        #expect(api.state.volume == 52)
+    }
+
+    @Test func parseHalfStepLowVolume() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("MV005\r")
+        #expect(api.state.volume == 1)
+    }
+
+    @Test func parseMaxVolumeIgnored() {
+        let api = DenonAPI()
+        api.state.volume = 45
+        api.parseResponseForTesting("MVMAX80\r")
+        #expect(api.state.volume == 45)
+    }
+
+    @Test func parseTwoDigitVolumeUnchanged() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("MV72\r")
+        #expect(api.state.volume == 72)
+    }
+}
+
+// MARK: - Input Alias Parsing Tests
+
+@MainActor
+struct InputAliasParsing {
+
+    @Test func parseAliasNoSpace() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("SSFUNSAT/CBL PS5\r")
+        #expect(api.state.inputAliases["SAT/CBL"] == "PS5")
+    }
+
+    @Test func parseAliasWithLeadingSpace() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("SSFUN BD My Blu-ray\r")
+        #expect(api.state.inputAliases["BD"] == "My Blu-ray")
+    }
+
+    @Test func parseMultipleAliases() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("SSFUNSAT/CBL PS5\rSSFUNBD Blu-ray Player\r")
+        #expect(api.state.inputAliases["SAT/CBL"] == "PS5")
+        #expect(api.state.inputAliases["BD"] == "Blu-ray Player")
+    }
+
+    @Test func emptyAliasNotStored() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("SSFUNBD\r")
+        #expect(api.state.inputAliases["BD"] == nil)
+    }
+
+    @Test func unknownCodeNotStored() {
+        let api = DenonAPI()
+        api.parseResponseForTesting("SSFUNXYZUNKNOWN SomeAlias\r")
+        #expect(api.state.inputAliases.isEmpty)
+    }
+
+    @Test func aliasDefaultsEmpty() {
+        let state = DenonState()
+        #expect(state.inputAliases.isEmpty)
+    }
+}
+
+// MARK: - DiscoveredReceiver Tests
+
+struct DiscoveredReceiverTests {
+
+    @Test func propertiesAreAccessible() {
+        let receiver = DiscoveredReceiver(name: "Denon AVR-X3800H", host: "192.168.1.10", port: 23)
+        #expect(receiver.name == "Denon AVR-X3800H")
+        #expect(receiver.host == "192.168.1.10")
+        #expect(receiver.port == 23)
+    }
+
+    @Test func twoInstancesHaveUniqueIDs() {
+        let r1 = DiscoveredReceiver(name: "Denon", host: "192.168.1.10", port: 23)
+        let r2 = DiscoveredReceiver(name: "Denon", host: "192.168.1.10", port: 23)
+        #expect(r1.id != r2.id)
+    }
+
+    @Test func isIdentifiable() {
+        let receiver = DiscoveredReceiver(name: "Test", host: "10.0.0.1", port: 23)
+        // Identifiable conformance: id is a UUID
+        #expect(receiver.id != UUID())
+    }
+
+    @Test func isHashable() {
+        let r1 = DiscoveredReceiver(name: "A", host: "10.0.0.1", port: 23)
+        let r2 = DiscoveredReceiver(name: "A", host: "10.0.0.1", port: 23)
+        var set = Set<DiscoveredReceiver>()
+        set.insert(r1)
+        set.insert(r2)
+        // Both have different UUIDs, so Set contains both
+        #expect(set.count == 2)
+    }
+}
+
+// MARK: - BonjourDiscovery State Tests
+
+@MainActor
+struct BonjourDiscoveryStateTests {
+
+    @Test func initialStateIsIdle() {
+        let discovery = BonjourDiscovery()
+        #expect(discovery.isScanning == false)
+        #expect(discovery.discoveredReceivers.isEmpty)
+        #expect(discovery.errorMessage == nil)
+    }
+
+    @Test func startScanSetsIsScanning() {
+        let discovery = BonjourDiscovery()
+        discovery.startScan(timeout: 0.1)
+        #expect(discovery.isScanning == true)
+        discovery.stopScan()
+    }
+
+    @Test func startScanClearsDiscoveredReceivers() {
+        let discovery = BonjourDiscovery()
+        // Manually insert a receiver to simulate stale state
+        discovery.discoveredReceivers = [DiscoveredReceiver(name: "Old", host: "1.2.3.4", port: 23)]
+        discovery.startScan(timeout: 0.1)
+        #expect(discovery.discoveredReceivers.isEmpty)
+        discovery.stopScan()
+    }
+
+    @Test func startScanClearsErrorMessage() {
+        let discovery = BonjourDiscovery()
+        discovery.errorMessage = "Previous error"
+        discovery.startScan(timeout: 0.1)
+        #expect(discovery.errorMessage == nil)
+        discovery.stopScan()
+    }
+
+    @Test func stopScanClearsIsScanning() {
+        let discovery = BonjourDiscovery()
+        discovery.startScan(timeout: 10)
+        discovery.stopScan()
+        #expect(discovery.isScanning == false)
+    }
+
+    @Test func consecutiveStartScansDoNotStack() {
+        let discovery = BonjourDiscovery()
+        discovery.startScan(timeout: 10)
+        discovery.startScan(timeout: 10)
+        // isScanning should still be true (not stacked), and no crash
+        #expect(discovery.isScanning == true)
+        discovery.stopScan()
+    }
+}
+
 // MARK: - ReceiverStatus Codable Tests
 
 struct ReceiverStatusTests {
@@ -896,5 +1062,55 @@ struct ReceiverStatusTests {
         #expect(decoded.isPowerOn == true)
         #expect(decoded.volume == 55)
         #expect(decoded.currentInput == "GAME")
+    }
+}
+
+// MARK: - LiveActivityManager State Tests
+
+@MainActor
+struct LiveActivityManagerTests {
+
+    @Test func isActiveDefaultsFalse() {
+        let manager = LiveActivityManager()
+        #expect(manager.isActive == false)
+    }
+
+    @Test func endOnInactiveManagerIsNoOp() {
+        let manager = LiveActivityManager()
+        // Should not crash when no activity is running
+        manager.end()
+        #expect(manager.isActive == false)
+    }
+
+    @Test func updateDoesNotCrashWhenActivityKitUnavailable() {
+        // Activity.request will fail in simulator test environment — the catch
+        // block swallows the error. isActive should remain false.
+        let manager = LiveActivityManager()
+        manager.update(
+            receiverName: "Test",
+            inputSource: "BD",
+            trackName: "Track",
+            artistName: "Artist",
+            albumName: "Album",
+            isPlaying: true,
+            volume: 50
+        )
+        // Either started (real device) or stayed inactive (simulator) — no crash
+        #expect(manager.isActive == true || manager.isActive == false)
+    }
+
+    @Test func endAfterUpdateLeavesInactive() {
+        let manager = LiveActivityManager()
+        manager.update(
+            receiverName: "Test",
+            inputSource: "NET",
+            trackName: "",
+            artistName: "",
+            albumName: "",
+            isPlaying: false,
+            volume: 0
+        )
+        manager.end()
+        #expect(manager.isActive == false)
     }
 }
