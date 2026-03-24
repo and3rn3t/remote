@@ -19,13 +19,13 @@ import ActivityKit
 struct ZoneState {
     /// Whether the zone is powered on.
     var isPowerOn: Bool = false
-    
+
     /// Volume level for this zone (0-98, representing 0.0 to 98.0 dB).
     var volume: Int = 0
-    
+
     /// Whether the zone audio is muted.
     var isMuted: Bool = false
-    
+
     /// Current input source code (e.g., "BD", "GAME", "TV").
     var currentInput: String = "Unknown"
 }
@@ -38,13 +38,13 @@ struct ZoneState {
 struct NowPlayingInfo {
     /// First line of metadata (typically artist name).
     var line1: String = ""
-    
+
     /// Second line of metadata (typically album name).
     var line2: String = ""
-    
+
     /// Third line of metadata (typically track title).
     var line3: String = ""
-    
+
     /// Fourth line of metadata (extra info, format, etc.).
     var line4: String = ""
 
@@ -66,22 +66,22 @@ struct NowPlayingInfo {
 struct DenonState {
     /// Whether the main zone is powered on.
     var isPowerOn: Bool = false
-    
+
     /// Main zone volume (0-98, representing 0.0 to 98.0 dB).
     var volume: Int = 0
-    
+
     /// Whether the main zone is muted.
     var isMuted: Bool = false
-    
+
     /// Current input source code (e.g., "BD", "GAME", "TV").
     var currentInput: String = "Unknown"
-    
+
     /// Current surround sound mode (e.g., "STEREO", "DOLBY DIGITAL").
     var surroundMode: String = "Unknown"
 
     /// State for Zone 2 (secondary audio zone).
     var zone2 = ZoneState()
-    
+
     /// State for Zone 3 (tertiary audio zone).
     var zone3 = ZoneState()
 
@@ -93,19 +93,19 @@ struct DenonState {
 
     /// Bass control (44-56, where 50 = 0 dB, ±6 dB range).
     var bass: Int = 50
-    
+
     /// Treble control (44-56, where 50 = 0 dB, ±6 dB range).
     var treble: Int = 50
 
     /// Dynamic Volume mode: "OFF", "LIT", "MED", or "HEV".
     var dynamicVolume: String = "OFF"
-    
+
     /// Whether Dynamic EQ is enabled.
     var dynamicEQ: Bool = false
 
     /// Receiver model name (if queried).
     var receiverModel: String = ""
-    
+
     /// Receiver firmware version (if queried).
     var firmwareVersion: String = ""
 
@@ -146,16 +146,16 @@ struct DenonState {
 final class DenonAPI {
     /// Current receiver state (power, volume, input, zones, etc.).
     var state = DenonState()
-    
+
     /// Whether the TCP connection is active.
     var isConnected = false
-    
+
     /// User-facing error message (nil if no error).
     var errorMessage: String?
-    
+
     /// Whether the API is currently attempting to reconnect.
     var isReconnecting = false
-    
+
     /// Current reconnection attempt number (for UI feedback).
     var currentReconnectAttempt = 0
 
@@ -312,7 +312,10 @@ final class DenonAPI {
             while !Task.isCancelled {
                 var shouldStop = false
                 await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-                    connection.receive(minimumIncompleteLength: 1, maximumLength: DenonConstants.readBufferSize) { @Sendable [weak self] data, _, isComplete, error in
+                    connection.receive(
+                        minimumIncompleteLength: 1,
+                        maximumLength: DenonConstants.readBufferSize
+                    ) { @Sendable [weak self] data, _, isComplete, error in
                         Task { @MainActor [weak self] in
                             guard let self else { cont.resume(); return }
                             if let data, !data.isEmpty {

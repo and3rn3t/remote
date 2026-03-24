@@ -93,5 +93,4 @@ struct DynamicSettingsView: View {
             do { try await action() } catch { onError(error.localizedDescription) }
         }
     }
-
 }

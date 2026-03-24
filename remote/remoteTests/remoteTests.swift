@@ -838,8 +838,8 @@ struct EdgeCaseParsingTests {
         #expect(api.state.nowPlaying.line3 == "Track")
         // Simulate cleared now-playing
         api.parseResponseForTesting("NSE1\rNSE3\r")
-        #expect(api.state.nowPlaying.line1 == "")
-        #expect(api.state.nowPlaying.line3 == "")
+        #expect(api.state.nowPlaying.line1.isEmpty)
+        #expect(api.state.nowPlaying.line3.isEmpty)
         #expect(api.state.nowPlaying.isEmpty)
     }
 

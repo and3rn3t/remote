@@ -4,6 +4,7 @@ excluded:
   - DerivedData
   - .build
   - .swiftpm
+  - remote/.build
   - remote/remote.xcodeproj
   - remote/build
 

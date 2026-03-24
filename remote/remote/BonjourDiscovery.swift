@@ -89,7 +89,7 @@ final class BonjourDiscovery {
 
     // MARK: - Private
 
-    private nonisolated func configureBrowser(_ browser: NWBrowser?) {
+    nonisolated private func configureBrowser(_ browser: NWBrowser?) {
         guard let browser else { return }
 
         browser.stateUpdateHandler = { [weak self] state in
@@ -115,7 +115,7 @@ final class BonjourDiscovery {
         }
     }
 
-    private nonisolated func resolveResult(_ result: NWBrowser.Result) {
+    nonisolated private func resolveResult(_ result: NWBrowser.Result) {
         // Filter for likely Denon devices by name
         guard case .service(let name, let type, _, _) = result.endpoint else { return }
 

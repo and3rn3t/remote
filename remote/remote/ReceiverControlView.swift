@@ -623,7 +623,6 @@ struct ReceiverControlView: View {
             }
         }
     }
-
 }
 
 #Preview {

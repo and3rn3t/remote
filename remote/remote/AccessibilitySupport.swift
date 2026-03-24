@@ -80,7 +80,7 @@ extension View {
 /// Increases padding and minimum tap target size for larger text sizes.
 struct AdaptiveButtonStyle: ButtonStyle {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    
+
     var isProminent: Bool = false
     var tintColor: Color?
 
@@ -119,9 +119,9 @@ struct AccessibleSlider: View {
     let step: Double
     let label: String
     let valueFormatter: (Double) -> String
-    
+
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    
+
     init(
         value: Binding<Double>,
         in range: ClosedRange<Double>,
@@ -135,7 +135,7 @@ struct AccessibleSlider: View {
         self.label = label
         self.valueFormatter = valueFormatter
     }
-    
+
     var body: some View {
         VStack(spacing: dynamicTypeSize >= .accessibility1 ? 12 : 8) {
             HStack {
@@ -147,7 +147,7 @@ struct AccessibleSlider: View {
                     .foregroundStyle(.secondary)
                     .accessibilityLabel("\(label): \(valueFormatter(value))")
             }
-            
+
             Slider(value: $value, in: range, step: step)
                 .accessibilityValue(valueFormatter(value))
                 .accessibilityLabel(label)
