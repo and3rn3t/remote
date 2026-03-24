@@ -13,19 +13,26 @@ import SwiftData
 struct SceneListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query private var allScenes: [ReceiverScene]
+    @Query private var scenes: [ReceiverScene]
 
     let receiverID: UUID
     let api: DenonAPI
     let receiver: DenonReceiver
 
-    private var scenes: [ReceiverScene] {
-        allScenes
-            .filter { $0.receiverID == receiverID }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
-
     @State private var showingSaveSheet = false
+
+    init(receiverID: UUID, api: DenonAPI, receiver: DenonReceiver) {
+        self.receiverID = receiverID
+        self.api = api
+        self.receiver = receiver
+        _scenes = Query(
+            filter: #Predicate<ReceiverScene> { scene in
+                scene.receiverID == receiverID
+            },
+            sort: \.createdAt,
+            order: .reverse
+        )
+    }
 
     var body: some View {
         NavigationStack {

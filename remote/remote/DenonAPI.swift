@@ -559,62 +559,61 @@ final class DenonAPI {
         let lines = response.components(separatedBy: "\r")
 
         for line in lines {
+            guard !line.isEmpty else { continue }
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
+            parseLine(trimmed)
+        }
+    }
 
-            // Zone 3 (check before Zone 2 since Z3 is a longer prefix)
+    /// Dispatches a single protocol line to the appropriate parser.
+    private func parseLine(_ trimmed: String) {
+        switch trimmed.first {
+        case "Z":
             if trimmed.hasPrefix("Z3") {
                 parseZoneResponse(trimmed, prefix: "Z3", zone: \.zone3)
-            }
-            // Zone 2
-            else if trimmed.hasPrefix("Z2") {
+            } else if trimmed.hasPrefix("Z2") {
                 parseZoneResponse(trimmed, prefix: "Z2", zone: \.zone2)
             }
-            // Now Playing (NSE lines)
-            else if trimmed.hasPrefix("NSE") {
-                parseNowPlayingResponse(trimmed)
-            }
-            // Sleep Timer
-            else if trimmed.hasPrefix("SLP") {
-                parseSleepTimerResponse(trimmed)
-            }
-            // Parameter Settings (tone, dynamic volume/EQ, dialogue enhancer, etc.)
-            else if trimmed.hasPrefix("PS") {
+        case "N":
+            if trimmed.hasPrefix("NSE") { parseNowPlayingResponse(trimmed) }
+        case "S":
+            parseSystemResponse(trimmed)
+        case "P":
+            if trimmed.hasPrefix("PS") {
                 parseParameterResponse(trimmed)
-            }
-            // Display Dimmer
-            else if trimmed.hasPrefix("DIM ") {
-                state.dimmer = trimmed.replacingOccurrences(of: "DIM ", with: "")
-            }
-            // ECO Mode
-            else if trimmed.hasPrefix("ECO") && !trimmed.hasPrefix("ECONO") {
-                state.ecoMode = trimmed.replacingOccurrences(of: "ECO", with: "")
-            }
-            // Auto Standby
-            else if trimmed.hasPrefix("STBY") {
-                state.autoStandby = trimmed.replacingOccurrences(of: "STBY", with: "")
-            }
-            // Video Settings (HDMI monitor, resolution, aspect)
-            else if trimmed.hasPrefix("VS") {
-                parseVideoResponse(trimmed)
-            }
-            // All-Zone Stereo
-            else if trimmed.hasPrefix("MNZST") {
-                let value = trimmed.replacingOccurrences(of: "MNZST ", with: "")
-                state.allZoneStereo = (value == "ON")
-            }
-            // Receiver Info
-            else if trimmed.hasPrefix("SSINFAI") {
-                parseReceiverInfoResponse(trimmed)
-            }
-            // Input aliases
-            else if trimmed.hasPrefix("SSFUN") {
-                parseInputAliasResponse(trimmed)
-            }
-            // Main zone
-            else {
+            } else {
                 parseMainZoneResponse(trimmed)
             }
+        case "D":
+            if trimmed.hasPrefix("DIM ") { state.dimmer = String(trimmed.dropFirst(4)) }
+        case "E":
+            if trimmed.hasPrefix("ECO") && !trimmed.hasPrefix("ECONO") {
+                state.ecoMode = String(trimmed.dropFirst(3))
+            }
+        case "V":
+            if trimmed.hasPrefix("VS") { parseVideoResponse(trimmed) }
+        case "M":
+            if trimmed.hasPrefix("MNZST") {
+                state.allZoneStereo = (String(trimmed.dropFirst(6)) == "ON")
+            } else {
+                parseMainZoneResponse(trimmed)
+            }
+        default:
+            break
+        }
+    }
+
+    /// Parser for system responses: sleep timer, standby, receiver info, input aliases.
+    private func parseSystemResponse(_ trimmed: String) {
+        if trimmed.hasPrefix("SLP") {
+            parseSleepTimerResponse(trimmed)
+        } else if trimmed.hasPrefix("STBY") {
+            state.autoStandby = String(trimmed.dropFirst(4))
+        } else if trimmed.hasPrefix("SSINFAI") {
+            parseReceiverInfoResponse(trimmed)
+        } else if trimmed.hasPrefix("SSFUN") {
+            parseInputAliasResponse(trimmed)
         }
     }
 
@@ -625,7 +624,7 @@ final class DenonAPI {
         } else if trimmed.hasPrefix("PWSTANDBY") {
             state.isPowerOn = false
         } else if trimmed.hasPrefix("MV") && !trimmed.hasPrefix("MVMAX") {
-            let volumeStr = trimmed.replacingOccurrences(of: "MV", with: "")
+            let volumeStr = String(trimmed.dropFirst(2))
             if volumeStr.count == 3 {
                 // Half-step (e.g. "525" = 52.5 dB): round up so UI stays
                 // consistent with the optimistic +1 update.
@@ -639,9 +638,9 @@ final class DenonAPI {
         } else if trimmed.hasPrefix("MUOFF") {
             state.isMuted = false
         } else if trimmed.hasPrefix("SI") {
-            state.currentInput = trimmed.replacingOccurrences(of: "SI", with: "")
+            state.currentInput = String(trimmed.dropFirst(2))
         } else if trimmed.hasPrefix("MS") {
-            state.surroundMode = trimmed.replacingOccurrences(of: "MS", with: "")
+            state.surroundMode = String(trimmed.dropFirst(2))
         }
     }
 
@@ -680,7 +679,7 @@ final class DenonAPI {
 
     private func parseSleepTimerResponse(_ line: String) {
         // SLPOFF or SLP030, SLP060, SLP090, SLP120
-        let value = line.replacingOccurrences(of: "SLP", with: "")
+        let value = String(line.dropFirst(3))
         if value == "OFF" {
             state.sleepTimer = nil
         } else if let minutes = Int(value) {
@@ -690,66 +689,55 @@ final class DenonAPI {
 
     private func parseParameterResponse(_ line: String) {
         if line.hasPrefix("PSBAS") {
-            let value = line.replacingOccurrences(of: "PSBAS ", with: "")
-            if let bass = Int(value) {
+            if let bass = Int(String(line.dropFirst(6))) {
                 state.bass = bass
             }
         } else if line.hasPrefix("PSTRE") {
-            let value = line.replacingOccurrences(of: "PSTRE ", with: "")
-            if let treble = Int(value) {
+            if let treble = Int(String(line.dropFirst(6))) {
                 state.treble = treble
             }
         } else if line.hasPrefix("PSDYNVOL") {
-            let value = line.replacingOccurrences(of: "PSDYNVOL ", with: "")
-            state.dynamicVolume = value
+            state.dynamicVolume = String(line.dropFirst(9))
         } else if line.hasPrefix("PSDYNEQ") {
-            let value = line.replacingOccurrences(of: "PSDYNEQ ", with: "")
-            state.dynamicEQ = (value == "ON")
+            state.dynamicEQ = (String(line.dropFirst(8)) == "ON")
         } else if line.hasPrefix("PSDEH") {
-            let value = line.replacingOccurrences(of: "PSDEH ", with: "")
-            state.dialogueEnhancer = value
+            state.dialogueEnhancer = String(line.dropFirst(6))
         } else if line.hasPrefix("PSSWL") {
-            let value = line.replacingOccurrences(of: "PSSWL ", with: "")
-            if let level = Int(value) {
+            if let level = Int(String(line.dropFirst(6))) {
                 state.subwooferLevel = level
             }
         } else if line.hasPrefix("PSLFE") {
-            let value = line.replacingOccurrences(of: "PSLFE ", with: "")
-            if let level = Int(value) {
+            if let level = Int(String(line.dropFirst(6))) {
                 state.lfeLevel = level
             }
         } else if line.hasPrefix("PSMULTEQ:") {
-            let value = line.replacingOccurrences(of: "PSMULTEQ:", with: "")
-            state.multEQ = value
+            state.multEQ = String(line.dropFirst(9))
         } else if line.hasPrefix("PSCINEMA EQ.") {
-            let value = line.replacingOccurrences(of: "PSCINEMA EQ.", with: "")
-            state.cinemaEQ = (value == "ON")
+            state.cinemaEQ = (String(line.dropFirst(12)) == "ON")
         } else if line.hasPrefix("PSTONE CTRL") {
-            let value = line.replacingOccurrences(of: "PSTONE CTRL ", with: "")
-            state.toneDefeat = (value == "ON")
+            state.toneDefeat = (String(line.dropFirst(12)) == "ON")
         } else if line.hasPrefix("PSNIGHT") {
-            let value = line.replacingOccurrences(of: "PSNIGHT ", with: "")
-            state.nightMode = value
+            state.nightMode = String(line.dropFirst(8))
         }
     }
 
     private func parseReceiverInfoResponse(_ line: String) {
         if line.hasPrefix("SSINFAISMD ") {
-            state.receiverModel = line.replacingOccurrences(of: "SSINFAISMD ", with: "")
+            state.receiverModel = String(line.dropFirst(11))
         } else if line.hasPrefix("SSINFAISFSV ") {
-            state.firmwareVersion = line.replacingOccurrences(of: "SSINFAISFSV ", with: "")
+            state.firmwareVersion = String(line.dropFirst(12))
         } else if line.hasPrefix("SSINFAISSIG ") {
-            state.signalInfo = line.replacingOccurrences(of: "SSINFAISSIG ", with: "")
+            state.signalInfo = String(line.dropFirst(12))
         }
     }
 
     private func parseVideoResponse(_ line: String) {
         if line.hasPrefix("VSMONI") {
-            state.hdmiMonitor = line.replacingOccurrences(of: "VSMONI", with: "")
+            state.hdmiMonitor = String(line.dropFirst(6))
         } else if line.hasPrefix("VSSC ") {
-            state.hdmiResolution = line.replacingOccurrences(of: "VSSC ", with: "")
+            state.hdmiResolution = String(line.dropFirst(5))
         } else if line.hasPrefix("VSASP ") {
-            state.videoAspect = line.replacingOccurrences(of: "VSASP ", with: "")
+            state.videoAspect = String(line.dropFirst(6))
         }
     }
 
