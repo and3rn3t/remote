@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		3DE7CA012F5CB00100103521 /* remoteWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3DE7CA042F5CB00400103521 /* remoteWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3DEA19A82F72095700336D5A /* SharedModels in Frameworks */ = {isa = PBXBuildFile; productRef = 3DE7CA162F5CB01600103521 /* SharedModels */; };
+		3DEA19A92F72095700336D5A /* SharedModels in Frameworks */ = {isa = PBXBuildFile; productRef = 3DE7CA172F5CB01700103521 /* SharedModels */; };
+		3DEA19AA2F72095700336D5A /* SharedModels in Frameworks */ = {isa = PBXBuildFile; productRef = 3DE7CA182F5CB01800103521 /* SharedModels */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -106,6 +109,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3DEA19A82F72095700336D5A /* SharedModels in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -113,6 +117,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3DEA19AA2F72095700336D5A /* SharedModels in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,6 +132,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3DEA19A92F72095700336D5A /* SharedModels in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,6 +209,7 @@
 			packageProductDependencies = (
 				3DE7CA182F5CB01800103521 /* SharedModels */,
 			);
+			productName = remoteTests;
 			productReference = 3DE7C9BA2F5CADBD00103521 /* remoteTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -248,6 +255,7 @@
 			packageProductDependencies = (
 				3DE7CA172F5CB01700103521 /* SharedModels */,
 			);
+			productName = remoteWidgets;
 			productReference = 3DE7CA042F5CB00400103521 /* remoteWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
@@ -286,10 +294,10 @@
 			);
 			mainGroup = 3DE7C9A02F5CADBC00103521;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
 				3DE7CA152F5CB01500103521 /* XCLocalSwiftPackageReference "SharedModels" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = 3DE7C9AA2F5CADBC00103521 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
