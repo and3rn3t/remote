@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build-and-release:
     name: Build and Upload to TestFlight
-    runs-on: macos-15
+    runs-on: macos-26
     
     steps:
       - name: Checkout
